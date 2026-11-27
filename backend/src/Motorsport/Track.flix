@@ -9,7 +9,7 @@
 pub mod Motorsport.Track {
 
     use oj::OrderedJson
-    use oj::OrderedJson.Json.{JObject, JString, JNumber}
+    use oj::OrderedJson.Json.{JObject, JString, JNumber, JArray}
     use Util.Duration.Duration
     use Motorsport.Circuit.Circuit
     use Motorsport.MiniSector
@@ -105,10 +105,20 @@ pub mod Motorsport.Track {
         let miniSectors = match track#miniSectors {
             case None       => Nil
             case Some(list) =>
-                let entries = list |> List.map(match (id, share) -> (MiniSector.jsonKey(id), shareToJson(share)));
-                ("miniSectors", JObject(entries)) :: Nil
+                let entries = list |> List.map(match (id, share) -> namedShareToJson(id, share)) |> List.toVector;
+                ("miniSectors", JArray(entries)) :: Nil
         };
         JObject(List.append(circuit, ("sectors", JObject(sectors)) :: miniSectors))
+
+    /// One stretch of the lap, named: the name the round's feed spells the
+    /// mini-sector with, then the share's own two fields.
+    def namedShareToJson(id: MiniSectorId, share: Share): OrderedJson.Json =
+        JObject(
+            ("name", JString(MiniSector.csvName(id))) ::
+            ("start", ratio(share#start)) ::
+            ("share", ratio(share#share)) ::
+            Nil
+        )
 
     def shareToJson(share: Share): OrderedJson.Json =
         JObject(

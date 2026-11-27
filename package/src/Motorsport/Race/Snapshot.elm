@@ -30,6 +30,7 @@ import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (MiniSectorPerformance, PerformanceLevel, RatedTime, SectorPerformance, SegmentState)
+import Motorsport.MiniSector exposing (Named)
 import Motorsport.PitStop exposing (PitStop)
 import Motorsport.Position exposing (Position)
 import Motorsport.Race as Race exposing (Race)
@@ -37,7 +38,6 @@ import Motorsport.Race.Car as Car exposing (Car, CarNumber)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Sector as Sector exposing (BySector)
 import Motorsport.Status as Status exposing (Status)
-import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector)
 
 
 {-| Every car of the race as it stands at one moment, in running order.
@@ -140,8 +140,8 @@ type alias CurrentLap =
     }
 
 
-{-| Where the car is on its lap at the mini-sector grain, on a circuit timed to
-one. `NotRecorded` away from Le Mans.
+{-| Where the car is on its lap at the mini-sector grain, on a round whose feed
+splits the lap that far. `NotRecorded` on every other round.
 
 `current` is `Nothing` wherever [`Lap.miniSegments`](Motorsport-Lap#miniSegments)
 could not place the car: past the last mini-sector, and inside one the source
@@ -161,7 +161,7 @@ type MiniSectorReading
 {-| The lap the car has just finished, as it was read off it.
 
 `rated` is `Nothing` for a lap the source data has no time for. `miniSectors` is
-`Nothing` away from Le Mans, which records none.
+`Nothing` on a round whose feed recorded none.
 
 -}
 type LastLap
@@ -183,7 +183,7 @@ type alias CurrentSectorStates =
 {-| The same reading at the finer grain.
 -}
 type alias CurrentMiniSectorStates =
-    ByMiniSector SegmentState
+    Named SegmentState
 
 
 {-| Read the whole race at a moment of it.
@@ -265,18 +265,23 @@ currentSectorStates { reached, lapIsOver } rated =
 under the same rule. A lap short of one running total is short of two
 mini-sectors, so the strip stops two before the car and waits there until it
 reaches the line.
+
+The cell's place on the track is its index in `rated`, which is the lap's own
+mini-sectors rated one by one: the same list in the same order, so the index the
+car's `position` is read against is the one it was counted in.
+
 -}
 currentMiniSectorStates : { reached : Maybe Lap.MiniSectorProgress, lapIsOver : Bool } -> MiniSectorPerformance -> CurrentMiniSectorStates
 currentMiniSectorStates { reached, lapIsOver } rated =
     let
-        stateOf mini rating =
+        stateOf position rating =
             if lapIsOver then
                 Performance.Completed rating
 
             else
                 case reached of
                     Just current ->
-                        case LeMans.compare mini current.miniSector of
+                        case Basics.compare position current.position of
                             LT ->
                                 Performance.Completed rating
 
@@ -289,7 +294,11 @@ currentMiniSectorStates { reached, lapIsOver } rated =
                     Nothing ->
                         Performance.NotEntered
     in
-    LeMans.map2 stateOf (LeMans.initialize identity) rated
+    List.indexedMap
+        (\position entry ->
+            { name = entry.name, value = stateOf position entry.value }
+        )
+        rated
 
 
 groupByClass : List CarAt -> List ( Class, List CarAt )

@@ -13,12 +13,12 @@ module Motorsport.Chart.Tracker.LapScale exposing
 import Duration exposing (Seconds)
 import Length exposing (Length)
 import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorShares(..), Share, TrackConfig)
+import Motorsport.MiniSector as MiniSector
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Sector as Sector
 import Motorsport.Simulation.Pace.Neutralisation as Neutralisation exposing (Neutralisation)
 import Motorsport.Simulation.Pace.ReferenceLap as ReferenceLap exposing (ReferenceLap)
 import Motorsport.Wec.Circuit.Layout exposing (MiniSectorLines(..), TimingLines)
-import Motorsport.Wec.Circuit.LeMans as LeMans
 import Quantity exposing (Quantity)
 
 
@@ -73,8 +73,8 @@ lapScale referenceLap lines config =
 
         ends =
             case ( config.miniSectors, lines.miniSectors ) of
-                ( MiniSectorShares shares, LeMansMiniSectors published ) ->
-                    LeMans.values (LeMans.map2 knot shares published)
+                ( MiniSectorShares shares, MiniSectors published ) ->
+                    MiniSector.values (MiniSector.map2 knot shares published)
 
                 -- Either the round was never timed at the finer grain or the
                 -- circuit places no lines finer than its three sectors; the

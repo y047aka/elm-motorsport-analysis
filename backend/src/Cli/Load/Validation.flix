@@ -237,9 +237,9 @@ pub mod Cli.Load.Validation {
                 formatSignedMsPair(eventName, lap, "hour-offset", base, offset)
             case Violation.MiniSectorSum(lap, lapTime, sum, blanks) =>
                 formatDurationPair(eventName, lap, "mini-sector-sum", lapTime, sum)
-                    + blankSuffix(List.map(MiniSector.jsonKey, blanks))
+                    + blankSuffix(List.map(MiniSector.csvName, blanks))
             case Violation.MiniSectorElapsedMonotonic(lap, prevId, prevElapsed, currId, currElapsed) =>
-                let kind = "mini-sector-elapsed[${MiniSector.jsonKey(prevId)}->${MiniSector.jsonKey(currId)}]";
+                let kind = "mini-sector-elapsed[${MiniSector.csvName(prevId)}->${MiniSector.csvName(currId)}]";
                 formatLabelledDurationPair(eventName, lap, kind, "prev", prevElapsed, "curr", currElapsed)
         }
 

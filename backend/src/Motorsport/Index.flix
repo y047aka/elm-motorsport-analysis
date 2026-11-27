@@ -90,8 +90,10 @@ pub mod Motorsport.Index {
             ("fastestLapTime", changesToJson(Record.FastestLap, index)) ::
             ("sectors", JObject(Sector.all() |> List.map(s ->
                 (Sector.jsonKey(s), changesToJson(Record.FastestSector(s), index))))) ::
-            ("miniSectors", JObject(MiniSector.all() |> List.map(m ->
-                (MiniSector.jsonKey(m), changesToJson(Record.FastestMiniSector(m), index))))) ::
+            ("miniSectors", JArray(MiniSector.all() |> List.map(m ->
+                JObject(("name", JString(MiniSector.csvName(m))) ::
+                        ("changes", changesToJson(Record.FastestMiniSector(m), index)) ::
+                        Nil)) |> List.toVector)) ::
             Nil
         )
 

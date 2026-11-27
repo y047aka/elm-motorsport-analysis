@@ -19,9 +19,9 @@ import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
+import Motorsport.MiniSector as MiniSector exposing (Named)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Sector as Sector exposing (BySector)
-import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector)
 
 
 type alias RawLap =
@@ -30,7 +30,7 @@ type alias RawLap =
     , lapNumber : Int
     , lapTime : Duration
     , sectors : BySector (Maybe Duration)
-    , miniSectors : Maybe (ByMiniSector RawMiniSector)
+    , miniSectors : Maybe (Dict String RawMiniSector)
     , elapsed : Instant
     , pitTime : Maybe Duration
     }
@@ -87,8 +87,6 @@ rawLapDecoder =
         |> required "pitTime" optionalDurationDecoder
 
 
-
-
 sectorsDecoder : Decoder (BySector (Maybe Duration))
 sectorsDecoder =
     Decode.succeed BySector
@@ -103,32 +101,13 @@ sectorTimeDecoder =
 
 
 {-| The mini-sector counterpart, on the rounds whose feed splits the lap that
-far. Every key is `optional`: the CLI drops a mini-sector it has neither a time
-nor a running total for, so a key short of fifteen is a mini-sector the feed
-says nothing about rather than a file of the wrong shape.
+far, keyed by the name the file spells the mini-sector with. A key the CLI
+leaves out is a mini-sector the feed says nothing about rather than a file of
+the wrong shape.
 -}
-miniSectorsDecoder : Decoder (ByMiniSector RawMiniSector)
+miniSectorsDecoder : Decoder (Dict String RawMiniSector)
 miniSectorsDecoder =
-    let
-        miniSector key =
-            optional key miniSectorDecoder { time = Nothing, elapsedInLap = Nothing }
-    in
-    Decode.succeed LeMans.ByMiniSector
-        |> miniSector "scl2"
-        |> miniSector "z4"
-        |> miniSector "ip1"
-        |> miniSector "z12"
-        |> miniSector "sclc"
-        |> miniSector "a7_1"
-        |> miniSector "ip2"
-        |> miniSector "a8_1"
-        |> miniSector "sclb"
-        |> miniSector "porin"
-        |> miniSector "porout"
-        |> miniSector "pitref"
-        |> miniSector "scl1"
-        |> miniSector "fordout"
-        |> miniSector "fl"
+    Decode.dict miniSectorDecoder
 
 
 {-| `elapsed` on the wire is what a [`Lap`](Motorsport-Lap) calls
@@ -171,14 +150,14 @@ best lap / sector times. Then assigns 0-based per-lap positions across all
 cars by sorting `elapsed` ascending for each lap number.
 
 -}
-attach : List RawLap -> List Car -> List Car
-attach rawLaps cars =
+attach : List String -> List RawLap -> List Car -> List Car
+attach miniSectorNames rawLaps cars =
     let
         lapsByCarNumber : Dict CarNumber (List Lap)
         lapsByCarNumber =
             rawLaps
                 |> groupBy .carNumber
-                |> Dict.map (\_ raws -> finalizeCarLaps raws)
+                |> Dict.map (\_ raws -> finalizeCarLaps miniSectorNames raws)
     in
     cars
         |> List.map
@@ -209,11 +188,11 @@ groupBy keyFn list =
         list
 
 
-finalizeCarLaps : List RawLap -> List Lap
-finalizeCarLaps raws =
+finalizeCarLaps : List String -> List RawLap -> List Lap
+finalizeCarLaps miniSectorNames raws =
     raws
         |> List.sortBy .lapNumber
-        |> List.foldl accumulate ( bestsInit, [] )
+        |> List.foldl (accumulate miniSectorNames) ( bestsInit miniSectorNames, [] )
         |> Tuple.second
         |> List.reverse
 
@@ -221,15 +200,15 @@ finalizeCarLaps raws =
 type alias Bests =
     { lap : Maybe Duration
     , sectors : BySector (Maybe Duration)
-    , miniSectors : ByMiniSector (Maybe Duration)
+    , miniSectors : Named (Maybe Duration)
     }
 
 
-bestsInit : Bests
-bestsInit =
+bestsInit : List String -> Bests
+bestsInit miniSectorNames =
     { lap = Nothing
     , sectors = Sector.initialize (always Nothing)
-    , miniSectors = LeMans.initialize (always Nothing)
+    , miniSectors = List.map (\name -> { name = name, value = Nothing }) miniSectorNames
     }
 
 
@@ -246,11 +225,14 @@ minMaybe current new =
             Just (Basics.min c n)
 
 
-accumulate : RawLap -> ( Bests, List Lap ) -> ( Bests, List Lap )
-accumulate raw ( bests, acc ) =
+accumulate : List String -> RawLap -> ( Bests, List Lap ) -> ( Bests, List Lap )
+accumulate miniSectorNames raw ( bests, acc ) =
     let
         lapTime =
             Lap.recorded raw.lapTime
+
+        miniSectors =
+            Maybe.map (byTrackOrder miniSectorNames) raw.miniSectors
 
         newBests =
             { lap = minMaybe bests.lap lapTime
@@ -260,9 +242,9 @@ accumulate raw ( bests, acc ) =
                 -- for, which is not a lap of the circuit. `Round.Index` throws
                 -- those out of the records, and a baseline that kept them
                 -- would rate a time against a record no one holds.
-                case ( lapTime, raw.miniSectors ) of
-                    ( Just _, Just miniSectors ) ->
-                        LeMans.map2 (\best mini -> minMaybe best mini.time) bests.miniSectors miniSectors
+                case ( lapTime, miniSectors ) of
+                    ( Just _, Just ms ) ->
+                        MiniSector.map2 (\best mini -> minMaybe best mini.time) bests.miniSectors ms
 
                     _ ->
                         bests.miniSectors
@@ -291,22 +273,38 @@ accumulate raw ( bests, acc ) =
                 -- car drove.
                 raw.pitTime |> Maybe.map Lap.ExitAtStart |> Maybe.withDefault Lap.NoCrossing
             , miniSectors =
-                raw.miniSectors
+                miniSectors
                     |> Maybe.map
-                        (\miniSectors ->
-                            LeMans.map2
+                        (\ms ->
+                            MiniSector.map2
                                 (\mini personalBest ->
                                     { time = mini.time
                                     , elapsedInLap = mini.elapsedInLap
                                     , personalBest = personalBest
                                     }
                                 )
-                                miniSectors
+                                ms
                                 newBests.miniSectors
                         )
             }
     in
     ( newBests, lap :: acc )
+
+
+{-| The lap's mini-sectors in track order, under the names the round's shares
+spell them with.
+-}
+byTrackOrder : List String -> Dict String RawMiniSector -> Named RawMiniSector
+byTrackOrder names byName =
+    List.map
+        (\name ->
+            { name = name
+            , value =
+                Dict.get name byName
+                    |> Maybe.withDefault { time = Nothing, elapsedInLap = Nothing }
+            }
+        )
+        names
 
 
 

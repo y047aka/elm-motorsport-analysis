@@ -21,11 +21,11 @@ import Motorsport.Flag as Flag exposing (Flag(..))
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap.Performance as Performance
 import Motorsport.Lap.SegmentStrip as SegmentStrip
+import Motorsport.MiniSector as MiniSector
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Sector as Sector exposing (Sector)
-import Motorsport.Wec.Circuit.LeMans as LeMans
 import View.CarNumberBadge as CarNumberBadge
 import View.ClassMark as ClassMark
 import View.Feed as Feed
@@ -247,7 +247,7 @@ fastestLap event =
                 , case lap.miniSectors of
                     Just miniSectors ->
                         SegmentStrip.miniSectorsRated
-                            (LeMans.initialize (\which -> rate (LeMans.get which miniSectors)))
+                            (MiniSector.map rate miniSectors)
 
                     Nothing ->
                         SegmentStrip.sectorsRated

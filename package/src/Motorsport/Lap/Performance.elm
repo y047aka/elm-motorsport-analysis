@@ -31,8 +31,8 @@ what a time rated against them is, and rates the times of a lap one by one.
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
+import Motorsport.MiniSector as MiniSector exposing (Named)
 import Motorsport.Sector as Sector exposing (BySector)
-import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector)
 
 
 type alias RatedTime =
@@ -72,18 +72,18 @@ ofSectors bestTimes lap =
 
 
 type alias MiniSectorPerformance =
-    ByMiniSector (Maybe RatedTime)
+    Named (Maybe RatedTime)
 
 
 ofMiniSectors : BestTimes.Snapshot -> Lap -> Maybe MiniSectorPerformance
 ofMiniSectors bestTimes lap =
     let
-        rateOne miniSector fastest =
+        rateOne fastest miniSector =
             rateTime (BestTimes.timeOf fastest)
                 { time = miniSector.time, personalBest = miniSector.personalBest }
     in
     lap.miniSectors
-        |> Maybe.map (\ms -> LeMans.map2 rateOne ms bestTimes.fastestMiniSectors)
+        |> Maybe.map (\ms -> MiniSector.map2 (\miniSector fastest -> rateOne fastest miniSector) ms bestTimes.fastestMiniSectors)
 
 
 

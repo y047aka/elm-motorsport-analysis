@@ -18,7 +18,6 @@ import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
 import Motorsport.Sector as Sector exposing (Sector(..))
 import Motorsport.Wec.Circuit.Geometry as Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.Layout as Circuit exposing (Layout, MiniSectorLines(..), TimingLines)
-import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Motorsport.Wec.Circuit.Map as Map
 
 
@@ -150,55 +149,23 @@ timingLines map lap =
                         finishLine
             )
     , miniSectors =
-        LeMansMiniSectors
-            (LeMans.initialize
-                (\mini ->
-                    case mini of
-                        SCL2 ->
-                            Nothing
+        MiniSectors
+            [ { name = "SCL2", value = Nothing }
+            , { name = "Z4", value = Nothing }
+            , { name = "IP1", value = Just map.intermediate1 }
+            , { name = "Z12", value = Nothing }
+            , { name = "SCLC", value = Nothing }
+            , { name = "A7-1", value = Nothing }
+            , { name = "IP2", value = Just map.intermediate2 }
+            , { name = "A8-1", value = Nothing }
+            , { name = "SCLB", value = Nothing }
+            , { name = "PORIN", value = Just map.porscheIn }
+            , { name = "POROUT", value = Just map.porscheOut }
+            , { name = "PITREF", value = Nothing }
 
-                        Z4 ->
-                            Nothing
-
-                        IP1 ->
-                            Just map.intermediate1
-
-                        Z12 ->
-                            Nothing
-
-                        SCLC ->
-                            Nothing
-
-                        A7_1 ->
-                            Nothing
-
-                        IP2 ->
-                            Just map.intermediate2
-
-                        A8_1 ->
-                            Nothing
-
-                        SCLB ->
-                            Nothing
-
-                        PORIN ->
-                            Just map.porscheIn
-
-                        POROUT ->
-                            Just map.porscheOut
-
-                        PITREF ->
-                            Nothing
-
-                        -- The map's timing loops name one line "SAFETY CAR LINE 1 / FORD IN".
-                        SCL1 ->
-                            Just map.fordIn
-
-                        FORDOUT ->
-                            Just map.fordOut
-
-                        FL ->
-                            Just finishLine
-                )
-            )
+            -- The map's timing loops name one line "SAFETY CAR LINE 1 / FORD IN".
+            , { name = "SCL1", value = Just map.fordIn }
+            , { name = "FORDOUT", value = Just map.fordOut }
+            , { name = "FL", value = Just finishLine }
+            ]
     }

@@ -153,8 +153,8 @@ pub mod Round.TestTrack {
         Assert.assertTrue(String.contains({substr = "\"start\""}, json));
         Assert.assertTrue(String.contains({substr = "\"share\""}, json));
         Assert.assertTrue(String.contains({substr = "\"miniSectors\""}, json));
-        Assert.assertTrue(String.contains({substr = "\"scl2\""}, json));
-        Assert.assertTrue(String.contains({substr = "\"fl\""}, json))
+        Assert.assertTrue(String.contains({substr = "\"SCL2\""}, json));
+        Assert.assertTrue(String.contains({substr = "\"FL\""}, json))
 
     @Test
     def testRoundWithoutMiniSectorsOmitsThem(): Unit \ {Assert, IO} =

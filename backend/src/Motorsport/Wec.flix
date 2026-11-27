@@ -405,7 +405,7 @@ pub mod Motorsport.Wec {
             if (sector#time == None and sector#elapsed == None)
                 None
             else
-                Some((MiniSector.jsonKey(id), miniSectorToJson(sector)))
+                Some((MiniSector.csvName(id), miniSectorToJson(sector)))
         );
         JObject(entries)
 

@@ -204,7 +204,7 @@ flagged =
 
 indexJson : String -> String
 indexJson flag =
-    """{ "lapCompletions": [], "bestTimeChanges": { "fastestLapTime": [], "sectors": { "s1": [], "s2": [], "s3": [] }, "miniSectors": { "scl2": [], "z4": [], "ip1": [], "z12": [], "sclc": [], "a7_1": [], "ip2": [], "a8_1": [], "sclb": [], "porin": [], "porout": [], "pitref": [], "scl1": [], "fordout": [], "fl": [] } }, "flagChanges": [ { "elapsed": "1:00.000", "flag": """
+    """{ "lapCompletions": [], "bestTimeChanges": { "fastestLapTime": [], "sectors": { "s1": [], "s2": [], "s3": [] }, "miniSectors": [{"name":"SCL2","changes":[]},{"name":"Z4","changes":[]},{"name":"IP1","changes":[]},{"name":"Z12","changes":[]},{"name":"SCLC","changes":[]},{"name":"A7-1","changes":[]},{"name":"IP2","changes":[]},{"name":"A8-1","changes":[]},{"name":"SCLB","changes":[]},{"name":"PORIN","changes":[]},{"name":"POROUT","changes":[]},{"name":"PITREF","changes":[]},{"name":"SCL1","changes":[]},{"name":"FORDOUT","changes":[]},{"name":"FL","changes":[]}] }, "flagChanges": [ { "elapsed": "1:00.000", "flag": """
         ++ ("\"" ++ flag ++ "\" } ] }")
 
 

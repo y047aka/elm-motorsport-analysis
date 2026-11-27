@@ -11,14 +11,11 @@ pub mod Motorsport.TestMiniSector {
         Assert.assertTrue(MiniSector.csvName(MiniSectorId.A8_1) == "A8-1")
 
     @Test
-    def testJsonKeysPreserveUnderscores(): Unit \ Assert =
-        // JSON keys keep the underscore, as `Data.Wec.Laps` decodes them.
-        Assert.assertTrue(MiniSector.jsonKey(MiniSectorId.A7_1) == "a7_1");
-        Assert.assertTrue(MiniSector.jsonKey(MiniSectorId.A8_1) == "a8_1")
-
-    @Test
-    def testAllIdsHaveDistinctJsonKeys(): Unit \ Assert =
-        let keys = MiniSector.all() |> List.map(MiniSector.jsonKey);
-        Assert.assertTrue(List.length(List.distinct(keys)) == 15)
+    def testAllIdsHaveDistinctNames(): Unit \ Assert =
+        // The name is the key the file names the mini-sector by, and the Elm
+        // side joins its lists on it, so a name two ids share would quietly
+        // merge two stretches of the lap.
+        let names = MiniSector.all() |> List.map(MiniSector.csvName);
+        Assert.assertTrue(List.length(List.distinct(names)) == 15)
 
 }

@@ -18,12 +18,13 @@ import Motorsport.Chart.Tracker.Config exposing (MiniSectorShares(..), Share, Tr
 import Motorsport.Class as Class
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Instant as Instant exposing (Instant)
+import Motorsport.MiniSector as MiniSector exposing (Named)
 import Motorsport.Race as Race
 import Motorsport.Race.Car as Car
 import Motorsport.Sector exposing (BySector)
-import Motorsport.Wec.Circuit.LeMans exposing (ByMiniSector)
 import Motorsport.Wec.Class as WecClass
 import Motorsport.Wec.Era exposing (Era)
+import Set
 
 
 {-| Less than the file states, and the omissions are the point.
@@ -119,9 +120,9 @@ eventDecoder era manufacturers carImageUrl =
 
 {-| Two keys the CLI leaves out when it has nothing to say, and `optional`
 rather than `oneOf` is what tells that apart from a key it wrote wrong. `oneOf`
-cannot: a `miniSectors` object one key short of fifteen would fall through to
-the same branch a missing one does, and Le Mans would quietly draw as a circuit
-that is not split that far.
+cannot: a `miniSectors` array one entry short of the circuit's lines would fall
+through to the same branch a missing one does, and Le Mans would quietly draw as
+a circuit that is not split that far.
 
 Left out, the two mean different things. A round with no `miniSectors`
 genuinely has none to draw. A round with no `circuit` ran at a circuit the CLI
@@ -136,14 +137,47 @@ file disagree about the shape of it, which is not a thing to carry on from
 trackDecoder : Decoder Track
 trackDecoder =
     Decode.succeed
-        (\circuit sectors miniSectors ->
-            { circuit = circuit
-            , config = { sectors = sectors, miniSectors = miniSectors }
-            }
+        (\circuit sectors rawMiniSectors ->
+            ( circuit, sectors, rawMiniSectors )
         )
         |> optional "circuit" (Decode.map Just Decode.string) Nothing
         |> required "sectors" bySectorDecoder
-        |> optional "miniSectors" (Decode.map MiniSectorShares byMiniSectorDecoder) NoMiniSectors
+        |> optional "miniSectors" (Decode.map Just Decode.value) Nothing
+        |> Decode.andThen readTrack
+
+
+{-| The shares are read off a `Decode.value`, which cannot fail, so the
+`optional` above only ever stands in for a key that is not there at all: shares
+a round cannot be drawn from fail the event.
+
+An ordered array has no totality to catch a line that is not there, so the two
+shapes a fifteen-key object could not express are refused here instead: no
+entries at all, and a name twice, which would place two stretches of the lap
+under one name.
+
+-}
+readTrack : ( Maybe String, BySector Share, Maybe Decode.Value ) -> Decoder Track
+readTrack ( circuit, sectors, rawMiniSectors ) =
+    let
+        shares =
+            case rawMiniSectors of
+                Nothing ->
+                    Ok NoMiniSectors
+
+                Just value ->
+                    Decode.decodeValue miniSectorsDecoder value
+                        |> Result.map MiniSectorShares
+                        |> Result.mapError Decode.errorToString
+    in
+    case shares of
+        Ok miniSectors ->
+            Decode.succeed
+                { circuit = circuit
+                , config = { sectors = sectors, miniSectors = miniSectors }
+                }
+
+        Err problem ->
+            Decode.fail problem
 
 
 shareDecoder : Decoder Share
@@ -161,24 +195,31 @@ bySectorDecoder =
         |> required "s3" shareDecoder
 
 
-byMiniSectorDecoder : Decoder (ByMiniSector Share)
-byMiniSectorDecoder =
-    Decode.succeed ByMiniSector
-        |> required "scl2" shareDecoder
-        |> required "z4" shareDecoder
-        |> required "ip1" shareDecoder
-        |> required "z12" shareDecoder
-        |> required "sclc" shareDecoder
-        |> required "a7_1" shareDecoder
-        |> required "ip2" shareDecoder
-        |> required "a8_1" shareDecoder
-        |> required "sclb" shareDecoder
-        |> required "porin" shareDecoder
-        |> required "porout" shareDecoder
-        |> required "pitref" shareDecoder
-        |> required "scl1" shareDecoder
-        |> required "fordout" shareDecoder
-        |> required "fl" shareDecoder
+miniSectorsDecoder : Decoder (Named Share)
+miniSectorsDecoder =
+    Decode.list namedShareDecoder
+        |> Decode.andThen
+            (\entries ->
+                let
+                    named =
+                        MiniSector.names entries
+                in
+                if List.isEmpty entries then
+                    Decode.fail "track.miniSectors has no entries"
+
+                else if List.length named /= Set.size (Set.fromList named) then
+                    Decode.fail "track.miniSectors names a mini-sector twice"
+
+                else
+                    Decode.succeed entries
+            )
+
+
+namedShareDecoder : Decoder { name : String, value : Share }
+namedShareDecoder =
+    Decode.map2 (\name share -> { name = name, value = share })
+        (field "name" string)
+        shareDecoder
 
 
 startingGridDecoder : Era -> Manufacturers -> (Car.CarNumber -> Maybe String) -> Decoder StartingGrid

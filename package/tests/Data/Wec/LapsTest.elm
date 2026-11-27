@@ -1,15 +1,16 @@
 module Data.Wec.LapsTest exposing (suite)
 
 import Data.Wec.Laps as Laps exposing (RawLap)
+import Dict exposing (Dict)
 import Expect
 import Motorsport.Class as Class
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap
 import Motorsport.Manufacturer exposing (unknown)
+import Motorsport.MiniSector as MiniSector
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Sector as Sector
 import Motorsport.TestHelpers.Driver exposing (driverNamed)
-import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Test exposing (Test, describe, test)
 
 
@@ -23,7 +24,7 @@ suite =
                         Ok rawLaps ->
                             let
                                 crossings =
-                                    Laps.attach rawLaps (placeholderCars [ "1" ])
+                                    Laps.attach miniSectorNames rawLaps (placeholderCars [ "1" ])
                                         |> List.concatMap .laps
                                         |> List.map .crossing
                             in
@@ -37,7 +38,7 @@ suite =
                         Ok rawLaps ->
                             let
                                 crossings =
-                                    Laps.attach rawLaps (placeholderCars [ "1" ])
+                                    Laps.attach miniSectorNames rawLaps (placeholderCars [ "1" ])
                                         |> List.concatMap .laps
                                         |> List.map .crossing
                             in
@@ -92,7 +93,7 @@ suite =
             [ test "reads each one's time and its running total from the line" <|
                 \_ ->
                     Laps.fromJsonl lapWithMiniSectors
-                        |> Result.map (List.filterMap .miniSectors >> List.map (\ms -> ( ms.scl2, ms.fl )))
+                        |> Result.map (List.filterMap .miniSectors >> List.map (\ms -> ( read "SCL2" ms, read "FL" ms )))
                         |> Expect.equal
                             (Ok
                                 [ ( { time = Just 20708, elapsedInLap = Just 20708 }
@@ -100,49 +101,53 @@ suite =
                                   )
                                 ]
                             )
-            , test "puts each key under the mini-sector it is named for" <|
+            , test "puts each time under the name the file gives it, in the order the shares name them" <|
                 \_ ->
-                    -- What the fifteen-step pipeline in `miniSectorsDecoder`
-                    -- cannot check for itself: the keys and the fields of
-                    -- `ByMiniSector` are both in track order, so a line out of
-                    -- place pairs a key with its neighbour's field and nothing
-                    -- fails. No two times on this lap are the same, which makes
-                    -- such a swap show.
+                    -- `fromJsonl` reads the file's keys without an order, and
+                    -- `attach` lays them in the order the round's shares name
+                    -- them. A time left on its neighbour's name is the mistake
+                    -- this catches; no two times on this lap are the same, which
+                    -- makes such a swap show.
                     Laps.fromJsonl lapWithMiniSectors
                         |> Result.map
-                            (List.filterMap .miniSectors
-                                >> List.concatMap (LeMans.toList >> List.map (Tuple.mapSecond .time))
+                            (\rawLaps ->
+                                Laps.attach miniSectorNames rawLaps (placeholderCars [ "1" ])
+                                    |> List.concatMap .laps
+                                    |> List.filterMap .miniSectors
+                                    |> List.concatMap MiniSector.toList
+                                    |> List.map (Tuple.mapSecond .time)
                             )
                         |> Expect.equal
                             (Ok
-                                [ ( SCL2, Just 20708 )
-                                , ( Z4, Just 13826 )
-                                , ( IP1, Just 17374 )
-                                , ( Z12, Just 35154 )
-                                , ( SCLC, Just 4685 )
-                                , ( A7_1, Just 26059 )
-                                , ( IP2, Just 17354 )
-                                , ( A8_1, Just 6928 )
-                                , ( SCLB, Just 37644 )
-                                , ( PORIN, Just 17155 )
-                                , ( POROUT, Just 16786 )
-                                , ( PITREF, Just 7954 )
-                                , ( SCL1, Just 2885 )
-                                , ( FORDOUT, Just 6560 )
-                                , ( FL, Just 3483 )
+                                [ ( "SCL2", Just 20708 )
+                                , ( "Z4", Just 13826 )
+                                , ( "IP1", Just 17374 )
+                                , ( "Z12", Just 35154 )
+                                , ( "SCLC", Just 4685 )
+                                , ( "A7-1", Just 26059 )
+                                , ( "IP2", Just 17354 )
+                                , ( "A8-1", Just 6928 )
+                                , ( "SCLB", Just 37644 )
+                                , ( "PORIN", Just 17155 )
+                                , ( "POROUT", Just 16786 )
+                                , ( "PITREF", Just 7954 )
+                                , ( "SCL1", Just 2885 )
+                                , ( "FORDOUT", Just 6560 )
+                                , ( "FL", Just 3483 )
                                 ]
                             )
             , test "reads a mini-sector the CLI left out as one with nothing in it" <|
                 \_ ->
-                    -- A key short of fifteen is a mini-sector the feed had
-                    -- nothing to say about, not a file of the wrong shape.
+                    -- A name short of the round's fifteen is a mini-sector the
+                    -- feed had nothing to say about, not a file of the wrong
+                    -- shape.
                     Laps.fromJsonl lapMissingAMiniSector
-                        |> Result.map (List.filterMap .miniSectors >> List.map .fordout)
+                        |> Result.map (List.filterMap .miniSectors >> List.map (read "FORDOUT"))
                         |> Expect.equal (Ok [ { time = Nothing, elapsedInLap = Nothing } ])
             , test "reads a blank time on a mini-sector that still has its total" <|
                 \_ ->
                     Laps.fromJsonl lapMissingAMiniSector
-                        |> Result.map (List.filterMap .miniSectors >> List.map .fl)
+                        |> Result.map (List.filterMap .miniSectors >> List.map (read "FL"))
                         |> Expect.equal (Ok [ { time = Nothing, elapsedInLap = Just 217793 } ])
             , test "leaves a round whose feed records none without any" <|
                 \_ ->
@@ -156,10 +161,10 @@ suite =
                     Laps.fromJsonl (lapWithMiniSectors ++ slowerSecondLap)
                         |> Result.map
                             (\rawLaps ->
-                                Laps.attach rawLaps (placeholderCars [ "1" ])
+                                Laps.attach miniSectorNames rawLaps (placeholderCars [ "1" ])
                                     |> List.concatMap .laps
                                     |> List.filterMap .miniSectors
-                                    |> List.map (.scl2 >> (\scl2 -> ( scl2.time, scl2.personalBest )))
+                                    |> List.map (\ms -> ( ms |> MiniSector.get "SCL2" |> Maybe.andThen .time, ms |> MiniSector.get "SCL2" |> Maybe.andThen .personalBest ))
                             )
                         |> Expect.equal
                             (Ok [ ( Just 20708, Just 20708 ), ( Just 21000, Just 20708 ) ])
@@ -171,10 +176,10 @@ suite =
                     Laps.fromJsonl (lapWithoutALapTime ++ slowerSecondLap)
                         |> Result.map
                             (\rawLaps ->
-                                Laps.attach rawLaps (placeholderCars [ "1" ])
+                                Laps.attach miniSectorNames rawLaps (placeholderCars [ "1" ])
                                     |> List.concatMap .laps
                                     |> List.filterMap .miniSectors
-                                    |> List.map (.scl2 >> .personalBest)
+                                    |> List.map (\ms -> ms |> MiniSector.get "SCL2" |> Maybe.andThen .personalBest)
                             )
                         |> Expect.equal (Ok [ Nothing, Just 21000 ])
             ]
@@ -189,7 +194,7 @@ suite =
                             ]
 
                         bests =
-                            Laps.attach rawLaps (placeholderCars [ "1" ])
+                            Laps.attach miniSectorNames rawLaps (placeholderCars [ "1" ])
                                 |> List.concatMap .laps
                                 |> List.map .best
                     in
@@ -205,7 +210,7 @@ suite =
                             ]
 
                         positionsByCar =
-                            Laps.attach rawLaps (placeholderCars [ "1", "2" ])
+                            Laps.attach miniSectorNames rawLaps (placeholderCars [ "1", "2" ])
                                 |> List.map (\car -> ( car.metadata.carNumber, List.map .position car.laps ))
                     in
                     Expect.equal
@@ -220,7 +225,7 @@ suite =
                             [ rawLap "1" 1 100000 100000 ]
 
                         car2Laps =
-                            Laps.attach rawLaps (placeholderCars [ "1", "2" ])
+                            Laps.attach miniSectorNames rawLaps (placeholderCars [ "1", "2" ])
                                 |> List.filter (\car -> car.metadata.carNumber == "2")
                                 |> List.head
                                 |> Maybe.map .laps
@@ -233,6 +238,21 @@ suite =
 
 
 -- HELPERS
+
+
+{-| The track order the round's shares name the mini-sectors in, which is the
+order `attach` holds a lap's in.
+-}
+miniSectorNames : List String
+miniSectorNames =
+    [ "SCL2", "Z4", "IP1", "Z12", "SCLC", "A7-1", "IP2", "A8-1", "SCLB", "PORIN", "POROUT", "PITREF", "SCL1", "FORDOUT", "FL" ]
+
+
+{-| What the file says about one mini-sector, and nothing about one it left out.
+-}
+read : String -> Dict String Laps.RawMiniSector -> Laps.RawMiniSector
+read name byName =
+    Dict.get name byName |> Maybe.withDefault { time = Nothing, elapsedInLap = Nothing }
 
 
 twoLaps : String
@@ -269,7 +289,7 @@ own time, and the running total from the line that places it.
 -}
 lapWithMiniSectors : String
 lapWithMiniSectors =
-    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"3:54.555","improvement":0},"sectors":{"s1":{"time":"51.908"},"s2":{"time":"1:23.252"},"s3":{"time":"1:39.395"}},"miniSectors":{"scl2":{"time":"20.708","elapsed":"20.708"},"z4":{"time":"13.826","elapsed":"34.534"},"ip1":{"time":"17.374","elapsed":"51.908"},"z12":{"time":"35.154","elapsed":"1:27.062"},"sclc":{"time":"4.685","elapsed":"1:31.747"},"a7_1":{"time":"26.059","elapsed":"1:57.806"},"ip2":{"time":"17.354","elapsed":"2:15.160"},"a8_1":{"time":"6.928","elapsed":"2:22.088"},"sclb":{"time":"37.644","elapsed":"2:59.732"},"porin":{"time":"17.155","elapsed":"3:16.887"},"porout":{"time":"16.786","elapsed":"3:33.673"},"pitref":{"time":"7.954","elapsed":"3:41.627"},"scl1":{"time":"2.885","elapsed":"3:44.512"},"fordout":{"time":"6.560","elapsed":"3:51.072"},"fl":{"time":"3.483","elapsed":"3:54.555"}},"elapsed":"3:54.555","crossingFinishLineInPit":"","pitTime":"","flagAtFl":"GF"}
+    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"3:54.555","improvement":0},"sectors":{"s1":{"time":"51.908"},"s2":{"time":"1:23.252"},"s3":{"time":"1:39.395"}},"miniSectors":{"SCL2":{"time":"20.708","elapsed":"20.708"},"Z4":{"time":"13.826","elapsed":"34.534"},"IP1":{"time":"17.374","elapsed":"51.908"},"Z12":{"time":"35.154","elapsed":"1:27.062"},"SCLC":{"time":"4.685","elapsed":"1:31.747"},"A7-1":{"time":"26.059","elapsed":"1:57.806"},"IP2":{"time":"17.354","elapsed":"2:15.160"},"A8-1":{"time":"6.928","elapsed":"2:22.088"},"SCLB":{"time":"37.644","elapsed":"2:59.732"},"PORIN":{"time":"17.155","elapsed":"3:16.887"},"POROUT":{"time":"16.786","elapsed":"3:33.673"},"PITREF":{"time":"7.954","elapsed":"3:41.627"},"SCL1":{"time":"2.885","elapsed":"3:44.512"},"FORDOUT":{"time":"6.560","elapsed":"3:51.072"},"FL":{"time":"3.483","elapsed":"3:54.555"}},"elapsed":"3:54.555","crossingFinishLineInPit":"","pitTime":"","flagAtFl":"GF"}
 """
 
 
@@ -291,7 +311,7 @@ decodeFlags codes =
 -}
 lapMissingAMiniSector : String
 lapMissingAMiniSector =
-    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"3:37.793","improvement":0},"sectors":{"s1":{"time":"51.908"},"s2":{"time":"1:23.252"},"s3":{"time":"1:22.633"}},"miniSectors":{"scl2":{"time":"20.708","elapsed":"20.708"},"z4":{"time":"13.826","elapsed":"34.534"},"ip1":{"time":"17.374","elapsed":"51.908"},"z12":{"time":"35.154","elapsed":"1:27.062"},"sclc":{"time":"4.685","elapsed":"1:31.747"},"a7_1":{"time":"26.059","elapsed":"1:57.806"},"ip2":{"time":"17.354","elapsed":"2:15.160"},"a8_1":{"time":"6.928","elapsed":"2:22.088"},"sclb":{"time":"37.644","elapsed":"2:59.732"},"porin":{"time":"17.155","elapsed":"3:16.887"},"porout":{"time":"16.786","elapsed":"3:33.673"},"pitref":{"time":"7.954","elapsed":"3:41.627"},"scl1":{"time":"2.885","elapsed":"3:44.512"},"fl":{"time":"","elapsed":"3:37.793"}},"elapsed":"3:37.793","crossingFinishLineInPit":"","pitTime":"","flagAtFl":"GF"}
+    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"3:37.793","improvement":0},"sectors":{"s1":{"time":"51.908"},"s2":{"time":"1:23.252"},"s3":{"time":"1:22.633"}},"miniSectors":{"SCL2":{"time":"20.708","elapsed":"20.708"},"Z4":{"time":"13.826","elapsed":"34.534"},"IP1":{"time":"17.374","elapsed":"51.908"},"Z12":{"time":"35.154","elapsed":"1:27.062"},"SCLC":{"time":"4.685","elapsed":"1:31.747"},"A7-1":{"time":"26.059","elapsed":"1:57.806"},"IP2":{"time":"17.354","elapsed":"2:15.160"},"A8-1":{"time":"6.928","elapsed":"2:22.088"},"SCLB":{"time":"37.644","elapsed":"2:59.732"},"PORIN":{"time":"17.155","elapsed":"3:16.887"},"POROUT":{"time":"16.786","elapsed":"3:33.673"},"PITREF":{"time":"7.954","elapsed":"3:41.627"},"SCL1":{"time":"2.885","elapsed":"3:44.512"},"FL":{"time":"","elapsed":"3:37.793"}},"elapsed":"3:37.793","crossingFinishLineInPit":"","pitTime":"","flagAtFl":"GF"}
 """
 
 
@@ -300,7 +320,7 @@ and its mini-sectors all the same. Its SCL2 is quicker than any real one here.
 -}
 lapWithoutALapTime : String
 lapWithoutALapTime =
-    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"0.000","improvement":0},"sectors":{"s1":{"time":""},"s2":{"time":""},"s3":{"time":""}},"miniSectors":{"scl2":{"time":"19.000","elapsed":"19.000"}},"elapsed":"3:30.000","crossingFinishLineInPit":"","pitTime":"","flagAtFl":"GF"}
+    """{"carNumber":"1","lapNumber":1,"position":0,"driverName":"D","lap":{"time":"0.000","improvement":0},"sectors":{"s1":{"time":""},"s2":{"time":""},"s3":{"time":""}},"miniSectors":{"SCL2":{"time":"19.000","elapsed":"19.000"}},"elapsed":"3:30.000","crossingFinishLineInPit":"","pitTime":"","flagAtFl":"GF"}
 """
 
 
@@ -308,7 +328,7 @@ lapWithoutALapTime =
 -}
 slowerSecondLap : String
 slowerSecondLap =
-    """{"carNumber":"1","lapNumber":2,"position":0,"driverName":"D","lap":{"time":"3:30.000","improvement":0},"sectors":{"s1":{"time":"52.000"},"s2":{"time":"1:23.000"},"s3":{"time":"1:15.000"}},"miniSectors":{"scl2":{"time":"21.000","elapsed":"21.000"}},"elapsed":"7:24.555","crossingFinishLineInPit":"","pitTime":"","flagAtFl":"GF"}
+    """{"carNumber":"1","lapNumber":2,"position":0,"driverName":"D","lap":{"time":"3:30.000","improvement":0},"sectors":{"s1":{"time":"52.000"},"s2":{"time":"1:23.000"},"s3":{"time":"1:15.000"}},"miniSectors":{"SCL2":{"time":"21.000","elapsed":"21.000"}},"elapsed":"7:24.555","crossingFinishLineInPit":"","pitTime":"","flagAtFl":"GF"}
 """
 
 

@@ -13,7 +13,6 @@ import Motorsport.Chart.Tracker.Marker as Marker
 import Motorsport.Class as Class
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Sector as Sector
-import Motorsport.Wec.Circuit.LeMans as LeMans
 import Scale exposing (ContinuousScale)
 import Svg exposing (Svg, circle, g, line, svg, text, text_)
 import Svg.Attributes exposing (class, dominantBaseline, fill, stroke, textAnchor)
@@ -216,21 +215,24 @@ renderMiniSectorLabels detail config =
             []
 
         ( Labels { miniSectorRadius, miniSectorFontSize }, MiniSectorShares shares ) ->
-            shares
-                |> LeMans.toList
-                |> List.map
-                    (\( mini, { start, share } ) ->
-                        makeLabel detail
-                            -- At the end of the mini-sector, not the middle of
-                            -- it as a sector's label is: fifteen of them round
-                            -- one circle leaves no room to centre them in.
-                            { progress = start + share
-                            , radius = miniSectorRadius
-                            , fontSize = miniSectorFontSize
-                            , color = "oklch(0.5 0 0)"
-                            , label = LeMans.toString mini
-                            }
-                    )
+            List.map
+                (\{ name, value } ->
+                    let
+                        { start, share } =
+                            value
+                    in
+                    makeLabel detail
+                        -- At the end of the mini-sector, not the middle of
+                        -- it as a sector's label is: fifteen of them round
+                        -- one circle leaves no room to centre them in.
+                        { progress = start + share
+                        , radius = miniSectorRadius
+                        , fontSize = miniSectorFontSize
+                        , color = "oklch(0.5 0 0)"
+                        , label = name
+                        }
+                )
+                shares
 
 
 makeLabel :

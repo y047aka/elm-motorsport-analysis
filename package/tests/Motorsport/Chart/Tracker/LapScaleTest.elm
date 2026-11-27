@@ -5,13 +5,13 @@ import Length
 import Motorsport.Chart.Tracker.Config exposing (MiniSectorShares(..), TrackConfig)
 import Motorsport.Chart.Tracker.LapScale as LapScale exposing (LapScale)
 import Motorsport.Circuit.Shape as Shape
+import Motorsport.MiniSector as MiniSector
 import Motorsport.Race.Snapshot as Snapshot
 import Motorsport.Race.SnapshotTest as SnapshotTest
 import Motorsport.Simulation.Pace.Neutralisation as Neutralisation
 import Motorsport.Simulation.Pace.ReferenceLap as ReferenceLap
 import Motorsport.Simulation.Pace.ReferenceLapTest as ReferenceLapTest
 import Motorsport.Wec.Circuit.Layout exposing (MiniSectorLines(..), TimingLines)
-import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Test exposing (Test, describe, test)
 
 
@@ -100,11 +100,10 @@ tests =
                         |> expectAll [ 500, 1150, 500, 1150, 500, 1150 ]
             ]
         , describe "the grain a round and its circuit disagree on"
-            [
-                -- `lapScale` reads the finer grain only when the round is timed
-                -- at it *and* the circuit places the lines; each of these two
-                -- combinations answers at the sector grain.
-                test "a round timed finer than its circuit places lines" <|
+            [ -- `lapScale` reads the finer grain only when the round is timed
+              -- at it *and* the circuit places the lines; each of these two
+              -- combinations answers at the sector grain.
+              test "a round timed finer than its circuit places lines" <|
                 \_ ->
                     -- Nothing finer than 1,000, 4,000 and 10,000 m is placed,
                     -- and these interpolate those three distances.
@@ -197,12 +196,12 @@ bySectors =
 sectorLines : TimingLines
 sectorLines =
     { sectors = { s1 = Length.meters 1000, s2 = Length.meters 4000, s3 = Length.meters 10000 }
-    , miniSectors = LeMansMiniSectors (LeMans.initialize (\_ -> Nothing))
+    , miniSectors = MiniSectors (everyMiniSector (\_ -> Nothing))
     }
 
 
 {-| The same three lines on a circuit that divides its lap no finer -- which is
- what a round whose feed carries mini-sector shares meets at COTA.
+what a round whose feed carries mini-sector shares meets at COTA.
 -}
 sectorsOnlyLines : TimingLines
 sectorsOnlyLines =
@@ -222,9 +221,9 @@ byMiniSectors =
         }
     , miniSectors =
         MiniSectorShares
-            (LeMans.initialize
-                (\mini ->
-                    { start = toFloat (index mini) / 15, share = 1 / 15 }
+            (everyMiniSector
+                (\name ->
+                    { start = toFloat (index name) / 15, share = 1 / 15 }
                 )
             )
     }
@@ -235,11 +234,11 @@ withoutIp2 =
     { byMiniSectors
         | miniSectors =
             MiniSectorShares
-                (LeMans.initialize
-                    (\mini ->
-                        { start = toFloat (index mini) / 15
+                (everyMiniSector
+                    (\name ->
+                        { start = toFloat (index name) / 15
                         , share =
-                            if mini == IP2 then
+                            if name == "IP2" then
                                 0
 
                             else
@@ -256,17 +255,17 @@ miniSectorLines : TimingLines
 miniSectorLines =
     { sectors = { s1 = Length.meters 1800, s2 = Length.meters 6000, s3 = Length.meters 12000 }
     , miniSectors =
-        LeMansMiniSectors
-            (LeMans.initialize
-                (\mini ->
-                    case mini of
-                        IP1 ->
+        MiniSectors
+            (everyMiniSector
+                (\name ->
+                    case name of
+                        "IP1" ->
                             Just (Length.meters 1800)
 
-                        IP2 ->
+                        "IP2" ->
                             Just (Length.meters 6000)
 
-                        FL ->
+                        "FL" ->
                             Just (Length.meters 12000)
 
                         _ ->
@@ -276,11 +275,29 @@ miniSectorLines =
     }
 
 
-index : LeMans2025MiniSector -> Int
-index mini =
-    LeMans.all
-        |> List.indexedMap Tuple.pair
-        |> List.filter (\( _, m ) -> m == mini)
+{-| The fifteen names of the fixture's circuit, in track order.
+-}
+names : List String
+names =
+    [ "SCL2", "Z4", "IP1", "Z12", "SCLC", "A7-1", "IP2", "A8-1", "SCLB", "PORIN", "POROUT", "PITREF", "SCL1", "FORDOUT", "FL" ]
+
+
+everyMiniSector : (String -> a) -> MiniSector.Named a
+everyMiniSector f =
+    List.map (\name -> { name = name, value = f name }) names
+
+
+index : String -> Int
+index name =
+    names
+        |> List.indexedMap
+            (\position candidate ->
+                if candidate == name then
+                    position
+
+                else
+                    -1
+            )
+        |> List.filter (\position -> position /= -1)
         |> List.head
-        |> Maybe.map Tuple.first
         |> Maybe.withDefault 0

@@ -10,8 +10,8 @@ import Json.Decode as Decode
 import Motorsport.BestTimes as BestTimes exposing (Changes, Holder, Snapshot)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant
+import Motorsport.MiniSector as MiniSector
 import Motorsport.Sector as Sector exposing (Sector(..))
-import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Test exposing (Test, describe, test)
 
 
@@ -29,9 +29,9 @@ tests =
                         |> Expect.equal [ Just 1000, Just 1500, Just 1000 ]
             , test "and so do each mini-sector's, all fifteen in track order" <|
                 \_ ->
-                    -- Every key on the wire holds the same time as its place in
-                    -- track order, so a pair swapped between fields shows up as
-                    -- a time in the wrong place rather than as a decode that
+                    -- Every entry on the wire holds the same time as its place
+                    -- in track order, so a pair swapped between entries shows up
+                    -- as a time in the wrong place rather than as a decode that
                     -- fails.
                     miniSectorsAtEnd
                         |> Expect.equal (List.range 1 15 |> List.map (\n -> Just (n * 100)))
@@ -109,7 +109,7 @@ miniSectorsAtEnd : List (Maybe Duration)
 miniSectorsAtEnd =
     atEnd changes
         |> .fastestMiniSectors
-        |> LeMans.values
+        |> MiniSector.values
         |> List.map BestTimes.timeOf
 
 
@@ -145,21 +145,21 @@ summaryIndexJson =
         , "s3": [ { "elapsed": "9.000", "time": "1.000", "carNumber": "2", "lap": 2, "driver": "Kamui KOBAYASHI" } ]
         }
     , "miniSectors":
-        { "scl2":    [ { "elapsed": "5.000", "time": "0.100", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ]
-        , "z4":      [ { "elapsed": "5.000", "time": "0.200", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ]
-        , "ip1":     [ { "elapsed": "5.000", "time": "0.300", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ]
-        , "z12":     [ { "elapsed": "5.000", "time": "0.400", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ]
-        , "sclc":    [ { "elapsed": "5.000", "time": "0.500", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ]
-        , "a7_1":    [ { "elapsed": "5.000", "time": "0.600", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ]
-        , "ip2":     [ { "elapsed": "5.000", "time": "0.700", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ]
-        , "a8_1":    [ { "elapsed": "5.000", "time": "0.800", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ]
-        , "sclb":    [ { "elapsed": "5.000", "time": "0.900", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ]
-        , "porin":   [ { "elapsed": "5.000", "time": "1.000", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ]
-        , "porout":  [ { "elapsed": "5.000", "time": "1.100", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ]
-        , "pitref":  [ { "elapsed": "5.000", "time": "1.200", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ]
-        , "scl1":    [ { "elapsed": "5.000", "time": "1.300", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ]
-        , "fordout": [ { "elapsed": "5.000", "time": "1.400", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ]
-        , "fl":      [ { "elapsed": "5.000", "time": "1.500", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ]
-        }
+        [ { "name": "SCL2",    "changes": [ { "elapsed": "5.000", "time": "0.100", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ] }
+        , { "name": "Z4",      "changes": [ { "elapsed": "5.000", "time": "0.200", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ] }
+        , { "name": "IP1",     "changes": [ { "elapsed": "5.000", "time": "0.300", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ] }
+        , { "name": "Z12",     "changes": [ { "elapsed": "5.000", "time": "0.400", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ] }
+        , { "name": "SCLC",    "changes": [ { "elapsed": "5.000", "time": "0.500", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ] }
+        , { "name": "A7-1",    "changes": [ { "elapsed": "5.000", "time": "0.600", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ] }
+        , { "name": "IP2",     "changes": [ { "elapsed": "5.000", "time": "0.700", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ] }
+        , { "name": "A8-1",    "changes": [ { "elapsed": "5.000", "time": "0.800", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ] }
+        , { "name": "SCLB",    "changes": [ { "elapsed": "5.000", "time": "0.900", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ] }
+        , { "name": "PORIN",   "changes": [ { "elapsed": "5.000", "time": "1.000", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ] }
+        , { "name": "POROUT",  "changes": [ { "elapsed": "5.000", "time": "1.100", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ] }
+        , { "name": "PITREF",  "changes": [ { "elapsed": "5.000", "time": "1.200", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ] }
+        , { "name": "SCL1",    "changes": [ { "elapsed": "5.000", "time": "1.300", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ] }
+        , { "name": "FORDOUT", "changes": [ { "elapsed": "5.000", "time": "1.400", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ] }
+        , { "name": "FL",      "changes": [ { "elapsed": "5.000", "time": "1.500", "carNumber": "2", "lap": 1, "driver": "Kamui KOBAYASHI" } ] }
+        ]
     }
     """

@@ -27,9 +27,9 @@ import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Flag as Flag exposing (Flag)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
+import Motorsport.MiniSector exposing (Named)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Sector exposing (BySector)
-import Motorsport.Wec.Circuit.LeMans exposing (ByMiniSector)
 
 
 type alias TimelineEvent =
@@ -55,7 +55,7 @@ type alias LapDetail =
     { driver : Driver
     , lap : Rated
     , sectors : BySector Rated
-    , miniSectors : Maybe (ByMiniSector Rated)
+    , miniSectors : Maybe (Named Rated)
     }
 
 
@@ -265,34 +265,22 @@ ratedBySectorDecoder =
         |> required "s3" ratedDecoder
 
 
-{-| All fifteen, keyed by the name the file uses. A lap written without a time for one
-of them has no segment there, which is a blank rather than a failure to read the lap.
+{-| In the order the file writes them, which is the order the circuit is driven.
+A lap written without a time for one of them has no segment there, which is a
+blank rather than a failure to read the lap.
 
-The fifteen are all required, and `lapDetailDecoder` reads the whole thing through
-`Decode.maybe` -- so a line carrying a differently-split fifteen reads as no
-mini-sectors, and is drawn on the three sectors. That is `Data.Wec`'s
-`byMiniSectorDecoder` doing the same thing to a lap, and here the fallback is a
-plausible drawing rather than a missing one.
+`lapDetailDecoder` reads the whole list through `Decode.maybe`, so an event whose
+mini-sectors are not this shape reads as no mini-sectors, and is drawn on the
+three sectors.
 
 -}
-ratedByMiniSectorDecoder : Decoder (ByMiniSector Rated)
+ratedByMiniSectorDecoder : Decoder (Named Rated)
 ratedByMiniSectorDecoder =
-    Decode.succeed ByMiniSector
-        |> required "scl2" ratedDecoder
-        |> required "z4" ratedDecoder
-        |> required "ip1" ratedDecoder
-        |> required "z12" ratedDecoder
-        |> required "sclc" ratedDecoder
-        |> required "a7_1" ratedDecoder
-        |> required "ip2" ratedDecoder
-        |> required "a8_1" ratedDecoder
-        |> required "sclb" ratedDecoder
-        |> required "porin" ratedDecoder
-        |> required "porout" ratedDecoder
-        |> required "pitref" ratedDecoder
-        |> required "scl1" ratedDecoder
-        |> required "fordout" ratedDecoder
-        |> required "fl" ratedDecoder
+    Decode.list
+        (Decode.map2 (\name rated -> { name = name, value = rated })
+            (field "name" string)
+            ratedDecoder
+        )
 
 
 eventTypeDecoder : String -> Decoder EventType

@@ -10,10 +10,10 @@ At Le Mans the lines are the seven of its mini-sectors' the map gives a distance
 import Expect
 import Length
 import Motorsport.Circuit.Shape as Shape
+import Motorsport.MiniSector as MiniSector
 import Motorsport.Simulation.Pace.ReferenceLap as ReferenceLap exposing (ReferenceLap)
 import Motorsport.Wec.Circuit.CircuitsTest as Circuits
 import Motorsport.Wec.Circuit.Layout exposing (Layout, MiniSectorLines(..))
-import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Quantity
 import Test exposing (Test, describe, test)
 
@@ -82,8 +82,9 @@ raceTest race =
 linesOf : Layout -> List Float
 linesOf layout =
     case layout.timingLines.miniSectors of
-        LeMansMiniSectors published ->
-            List.filterMap (\mini -> LeMans.get mini published) [ IP1, IP2, PORIN, POROUT, SCL1, FORDOUT, FL ]
+        MiniSectors published ->
+            [ "IP1", "IP2", "PORIN", "POROUT", "SCL1", "FORDOUT", "FL" ]
+                |> List.filterMap (\name -> published |> MiniSector.get name |> Maybe.withDefault Nothing)
                 |> List.map Length.inMeters
 
         SectorsOnly ->

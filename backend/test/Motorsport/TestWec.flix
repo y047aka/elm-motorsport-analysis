@@ -228,18 +228,18 @@ pub mod Motorsport.TestWec {
         }
 
     @Test
-    def testLeMansRowJsonContainsMiniSectorsWithHyphenedKeys(): Unit \ Assert =
-        // A7-1 / A8-1 round-trip to a7_1 / a8_1 in the JSON output, the keys
-        // `Data.Wec.Laps` decodes on the Elm side.
+    def testLeMansRowJsonNamesTheMiniSectorsAsTheCsvDoes(): Unit \ Assert =
+        // The name reaches the file exactly as the CSV column spells it, hyphen
+        // and all, since it is the name the Elm side joins its lists on.
         match decodeLeMansOne(realLeMansLapRow()) {
             case Ok(r) =>
                 let json = OrderedJson.toPrettyString(2, Wec.toJson(r));
                 Assert.assertTrue(String.contains({substr = "\"miniSectors\""}, json));
-                Assert.assertTrue(String.contains({substr = "\"a7_1\""}, json));
-                Assert.assertTrue(String.contains({substr = "\"a8_1\""}, json));
-                Assert.assertTrue(not String.contains({substr = "\"a7-1\""}, json));
-                Assert.assertTrue(String.contains({substr = "\"scl2\""}, json));
-                Assert.assertTrue(String.contains({substr = "\"fl\""}, json))
+                Assert.assertTrue(String.contains({substr = "\"A7-1\""}, json));
+                Assert.assertTrue(String.contains({substr = "\"A8-1\""}, json));
+                Assert.assertTrue(not String.contains({substr = "\"a7_1\""}, json));
+                Assert.assertTrue(String.contains({substr = "\"SCL2\""}, json));
+                Assert.assertTrue(String.contains({substr = "\"FL\""}, json))
             case Err(_) => Assert.assertTrue(false)
         }
 

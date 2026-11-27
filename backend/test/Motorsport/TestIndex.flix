@@ -35,7 +35,7 @@ pub mod Motorsport.TestIndex {
         Assert.assertTrue(Sector.all() |> List.forAll(s ->
             String.contains({substr = "\"${Sector.jsonKey(s)}\""}, json)));
         Assert.assertTrue(MiniSector.all() |> List.forAll(m ->
-            String.contains({substr = "\"${MiniSector.jsonKey(m)}\""}, json)))
+            String.contains({substr = "\"${MiniSector.csvName(m)}\""}, json)))
 
     @Test
     def theCountAgreesWithTheEnumeration(): Unit \ Assert =

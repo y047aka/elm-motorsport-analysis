@@ -14,7 +14,9 @@ import Dict
 import Expect
 import Http
 import Json.Decode as Decode
+import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorShares(..))
 import Motorsport.Instant as Instant
+import Motorsport.MiniSector as MiniSector
 import Motorsport.Race.Timeline as Timeline
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Motorsport.Replay as Replay
@@ -83,10 +85,15 @@ summaryJson =
                 [ { "elapsed": "1:53.000", "time": "1:53.000", "carNumber": "7", "lap": 1, "driver": "KOBAYASHI" } ]
             , "sectors": { "s1": [], "s2": [], "s3": [] }
             , "miniSectors":
-                { "scl2": [], "z4": [], "ip1": [], "z12": [], "sclc": []
-                , "a7_1": [], "ip2": [], "a8_1": [], "sclb": [], "porin": []
-                , "porout": [], "pitref": [], "scl1": [], "fordout": [], "fl": []
-                }
+                [ { "name": "SCL2", "changes": [] }, { "name": "Z4", "changes": [] }
+                , { "name": "IP1", "changes": [] }, { "name": "Z12", "changes": [] }
+                , { "name": "SCLC", "changes": [] }, { "name": "A7-1", "changes": [] }
+                , { "name": "IP2", "changes": [] }, { "name": "A8-1", "changes": [] }
+                , { "name": "SCLB", "changes": [] }, { "name": "PORIN", "changes": [] }
+                , { "name": "POROUT", "changes": [] }, { "name": "PITREF", "changes": [] }
+                , { "name": "SCL1", "changes": [] }, { "name": "FORDOUT", "changes": [] }
+                , { "name": "FL", "changes": [] }
+                ]
             }
         , "flagChanges": [ { "elapsed": "1:00.000", "flag": "safetyCar" } ]
         }
@@ -279,6 +286,94 @@ step msg model =
     Shared.update msg model |> Tuple.first
 
 
+{-| The mini-sectors a summary's `track` block hands back, or why the round was
+refused.
+-}
+miniSectorsOf : String -> Result String (List String)
+miniSectorsOf track =
+    case Era.fromSeason 2025 of
+        Nothing ->
+            Err "no era for the season"
+
+        Just era ->
+            Decode.decodeString
+                (Wec.eventDecoder era manufacturers (photographAt "spa_6h"))
+                (summaryWithTrack track)
+                |> Result.map (.track >> .config >> .miniSectors >> namesOf)
+                |> Result.mapError Decode.errorToString
+
+
+namesOf : MiniSectorShares -> List String
+namesOf shares =
+    case shares of
+        NoMiniSectors ->
+            []
+
+        MiniSectorShares shares_ ->
+            MiniSector.names shares_
+
+
+{-| `summaryJson` with its `track` block given. An array in track order, spelled
+as 2025's Le Mans feed spells it.
+-}
+leMansTrack : String
+leMansTrack =
+    """{ "sectors": { "s1": { "start": 0.0, "share": 0.3 }, "s2": { "start": 0.3, "share": 0.4 }, "s3": { "start": 0.7, "share": 0.3 } }
+     , "miniSectors":
+         [ { "name": "SCL2", "start": 0.0, "share": 0.04 }, { "name": "Z4", "start": 0.04, "share": 0.05 }
+         , { "name": "IP1", "start": 0.09, "share": 0.07 }, { "name": "Z12", "start": 0.16, "share": 0.16 }
+         , { "name": "SCLC", "start": 0.32, "share": 0.02 }, { "name": "A7-1", "start": 0.34, "share": 0.12 }
+         , { "name": "IP2", "start": 0.46, "share": 0.08 }, { "name": "A8-1", "start": 0.54, "share": 0.03 }
+         , { "name": "SCLB", "start": 0.57, "share": 0.18 }, { "name": "PORIN", "start": 0.75, "share": 0.08 }
+         , { "name": "POROUT", "start": 0.83, "share": 0.08 }, { "name": "PITREF", "start": 0.91, "share": 0.03 }
+         , { "name": "SCL1", "start": 0.94, "share": 0.02 }, { "name": "FORDOUT", "start": 0.96, "share": 0.02 }
+         , { "name": "FL", "start": 0.98, "share": 0.02 }
+         ] }"""
+
+
+sectorsOnlyTrack : String
+sectorsOnlyTrack =
+    """{ "sectors": { "s1": { "start": 0.0, "share": 0.3 }, "s2": { "start": 0.3, "share": 0.4 }, "s3": { "start": 0.7, "share": 0.3 } } }"""
+
+
+{-| `summaryJson` with a given `track` object, so a case can say what shares the
+round carries.
+-}
+summaryWithTrack : String -> String
+summaryWithTrack track =
+    """
+    { "name": "6 Hours of Spa"
+    , "season": 2025
+    , "date": "2025-05-10"
+    , "race": { "duration": "6:00:00.000", "timeLimit": "6:00:00.000", "lapTotal": 2 }
+    , "track": """
+        ++ track
+        ++ """
+    , "startingGrid":
+        { "basis": "lap1_s1"
+        , "entries":
+            [ { "position": 1
+              , "car":
+                    { "carNumber": "7", "drivers": [ { "name": "KOBAYASHI" } ]
+                    , "class": "HYPERCAR", "group": "H"
+                    , "team": "Toyota Gazoo Racing", "manufacturer": "Toyota"
+                    }
+              }
+            ]
+        }
+    , "index":
+        { "lapCompletions": [ { "lap": 1, "elapsed": "1:53.000" } ]
+        , "bestTimeChanges":
+            { "fastestLapTime": []
+            , "sectors": { "s1": [], "s2": [], "s3": [] }
+            , "miniSectors": []
+            }
+        , "flagChanges": [ { "elapsed": "1:00.000", "flag": "safetyCar" } ]
+        }
+    }
+    """
+
+
 suite : Test
 suite =
     describe "Shared"
@@ -293,6 +388,24 @@ suite =
                         ( Just "/static/images/wec/2025/toyota-7.png"
                         , Just "/static/images/wec/2025/toyota-7-le-mans.png"
                         )
+        , describe "the mini-sectors the summary carries"
+            [ test "keeps the names and the order the array gives them" <|
+                \_ ->
+                    miniSectorsOf leMansTrack
+                        |> Expect.equal (Ok [ "SCL2", "Z4", "IP1", "Z12", "SCLC", "A7-1", "IP2", "A8-1", "SCLB", "PORIN", "POROUT", "PITREF", "SCL1", "FORDOUT", "FL" ])
+            , test "reads a summary that carries none as a round with none to draw" <|
+                \_ ->
+                    miniSectorsOf sectorsOnlyTrack
+                        |> Expect.equal (Ok [])
+            , test "refuses an array with no entries rather than drawing the ring" <|
+                \_ ->
+                    miniSectorsOf "{ \"sectors\": { \"s1\": { \"start\": 0.0, \"share\": 0.3 }, \"s2\": { \"start\": 0.3, \"share\": 0.4 }, \"s3\": { \"start\": 0.7, \"share\": 0.3 } }, \"miniSectors\": [] }"
+                        |> Expect.err
+            , test "refuses a name twice, which would put two stretches of the lap under one name" <|
+                \_ ->
+                    miniSectorsOf "{ \"sectors\": { \"s1\": { \"start\": 0.0, \"share\": 0.3 }, \"s2\": { \"start\": 0.3, \"share\": 0.4 }, \"s3\": { \"start\": 0.7, \"share\": 0.3 } }, \"miniSectors\": [ { \"name\": \"IP1\", \"start\": 0.0, \"share\": 0.5 }, { \"name\": \"IP1\", \"start\": 0.5, \"share\": 0.5 } ] }"
+                        |> Expect.err
+            ]
         , describe "update"
             [ test "resolves the round whichever of the URL, the calendar and the car images is last" <|
                 \_ ->

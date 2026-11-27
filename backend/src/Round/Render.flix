@@ -1,7 +1,7 @@
 pub mod Round.Render {
 
     use oj::OrderedJson.Json
-    use oj::OrderedJson.Json.{JObject, JNumber, JString}
+    use oj::OrderedJson.Json.{JObject, JArray, JNumber, JString}
     use Util.Json.Extra
     use Motorsport.Index
     use Motorsport.Metadata
@@ -56,13 +56,24 @@ pub mod Round.Render {
     /// Absent where the round's feed measured no mini-sectors, rather than fifteen
     /// blanks. Whether the tracker has lines for the circuit is a different fact: a
     /// circuit drawn from a survey can be timed no finer than three sectors.
+    ///
+    /// The list is in track order and every entry names itself, which is what lets
+    /// the reader keep that order without knowing the names.
     def miniField(d: Detail): List[(String, Json)] =
         match d#miniSectors {
             case None      => Nil
             case Some(minis) =>
-                ("miniSectors", JObject(minis |> List.map(match (mini, rated) ->
-                    (Motorsport.MiniSector.jsonKey(mini), ratedToJson(rated))))) :: Nil
+                ("miniSectors", JArray(minis |> List.map(match (mini, rated) ->
+                    namedRatedToJson(mini, rated)) |> List.toVector)) :: Nil
         }
+
+    def namedRatedToJson(id: MiniSector.MiniSectorId, rated: Rated): Json =
+        JObject(
+            ("name", JString(MiniSector.csvName(id))) ::
+            ("time", durationJson(rated#time)) ::
+            ("fastest", durationJson(rated#fastest)) ::
+            ("personalBest", durationJson(rated#personalBest)) :: Nil
+        )
 
     def ratedToJson(rated: Rated): Json =
         JObject(

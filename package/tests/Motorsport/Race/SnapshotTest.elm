@@ -2,7 +2,6 @@ module Motorsport.Race.SnapshotTest exposing (fieldWithTailenders, suite)
 
 import Expect
 import Internal.ChangePoints as ChangePoints exposing (ChangePoints)
-import List.Extra
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Duration exposing (Duration)
@@ -11,6 +10,7 @@ import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (PerformanceLevel(..), SegmentState(..))
 import Motorsport.Manufacturer as Manufacturer
+import Motorsport.MiniSector as MiniSector exposing (Named)
 import Motorsport.Race as Race
 import Motorsport.Race.Car as Car exposing (Car)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Lane, Snapshot)
@@ -18,7 +18,6 @@ import Motorsport.Sector as Sector exposing (Sector(..))
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.TestHelpers.Driver exposing (driverNamed)
 import Motorsport.TestHelpers.Lap as TestLap
-import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Motorsport.Wec.Class as WecClass
 import Motorsport.Wec.Era as Era
 import Test exposing (Test, describe, test)
@@ -140,14 +139,14 @@ suite =
                     carAt "7" (leMansFieldAt 3500)
                         |> Maybe.andThen (.currentLap >> .miniSectors >> recordedMiniSectors)
                         |> Maybe.andThen .current
-                        |> Expect.equal (Just { miniSector = Z12, progress = 0.5, time = 1000 })
+                        |> Expect.equal (Just { miniSector = "Z12", position = 3, progress = 0.5, time = 1000 })
             , test "each of them reads complete behind the car, part way at it, and untouched ahead" <|
                 \_ ->
                     carAt "7" (leMansFieldAt 3500)
                         |> Maybe.andThen (.currentLap >> .miniSectors >> recordedMiniSectors)
                         |> Maybe.map
                             (\{ states } ->
-                                ( stateName states.ip1, stateName states.z12, stateName states.sclc )
+                                ( stateNamed "IP1" states, stateNamed "Z12" states, stateNamed "SCLC" states )
                             )
                         |> Expect.equal (Just ( "Completed", "InProgress 0.5", "NotEntered" ))
             , test "and where the data records none there is nothing to read at that grain, though there is still a sector" <|
@@ -181,21 +180,21 @@ suite =
                 \_ ->
                     -- SCLC's running total is what places SCLC and starts
                     -- A7-1, so 5.500 falls in a stretch two mini-sectors wide.
-                    miniSectorStatesOf (leMansFieldMissing SCLC 5500)
+                    miniSectorStatesOf (leMansFieldMissing "SCLC" 5500)
                         |> Maybe.map
                             (\states ->
-                                ( stateName states.z12, stateName states.sclc, stateName states.fl )
+                                ( stateNamed "Z12" states, stateNamed "SCLC" states, stateNamed "FL" states )
                             )
                         |> Expect.equal (Just ( "Completed", "NotEntered", "NotEntered" ))
             , test "leaves every mini-sector unentered where the gap is the first of them" <|
                 \_ ->
-                    miniSectorStatesOf (leMansFieldMissing SCL2 1500)
-                        |> Maybe.map (LeMans.values >> List.map stateName)
+                    miniSectorStatesOf (leMansFieldMissing "SCL2" 1500)
+                        |> Maybe.map (MiniSector.values >> List.map stateName)
                         |> Expect.equal (Just (List.repeat 15 "NotEntered"))
             , test "and reads them all as behind the car once the lap is over" <|
                 \_ ->
-                    miniSectorStatesOf (leMansFieldMissing SCLC 15000)
-                        |> Maybe.map (LeMans.values >> List.map stateName)
+                    miniSectorStatesOf (leMansFieldMissing "SCLC" 15000)
+                        |> Maybe.map (MiniSector.values >> List.map stateName)
                         |> Expect.equal (Just (List.repeat 15 "Completed"))
             ]
         , describe "the record a running lap is rated against is the car's own, at that moment"
@@ -399,7 +398,7 @@ fieldIndex =
             , s2 = changes [ { at = 5000, car = "2", lap = 1, time = 1500 } ]
             , s3 = changes [ { at = 5000, car = "2", lap = 1, time = 2000 }, { at = 9000, car = "2", lap = 2, time = 1000 } ]
             }
-        , fastestMiniSectors = LeMans.initialize (\_ -> ChangePoints.empty)
+        , fastestMiniSectors = []
         }
     , flagChanges = ChangePoints.empty
     }
@@ -422,7 +421,7 @@ leMansIndex =
             , s2 = setBy "7" 15000 4000
             , s3 = setBy "7" 15000 8000
             }
-        , fastestMiniSectors = LeMans.initialize (\_ -> setBy "7" 15000 1000)
+        , fastestMiniSectors = everyMiniSector (\_ -> setBy "7" 15000 1000)
         }
     , flagChanges = ChangePoints.empty
     }
@@ -445,7 +444,7 @@ untimedSectorsIndex untimed =
                     else
                         setBy "5" 6000 (Sector.get sector { s1 = 1000, s2 = 2000, s3 = 3000 })
                 )
-        , fastestMiniSectors = LeMans.initialize (\_ -> ChangePoints.empty)
+        , fastestMiniSectors = []
         }
     , flagChanges = ChangePoints.empty
     }
@@ -487,6 +486,29 @@ sectorStatesOf : String -> Snapshot -> Maybe Snapshot.CurrentSectorStates
 sectorStatesOf carNumber snapshot =
     carAt carNumber snapshot
         |> Maybe.map (.currentLap >> .sectorStates)
+
+
+{-| The fifteen mini-sectors the Le Mans fixtures are split by, in track order,
+and a value for each.
+-}
+everyMiniSector : (String -> a) -> Named a
+everyMiniSector f =
+    List.map (\name -> { name = name, value = f name }) miniSectorNames
+
+
+miniSectorNames : List String
+miniSectorNames =
+    [ "SCL2", "Z4", "IP1", "Z12", "SCLC", "A7-1", "IP2", "A8-1", "SCLB", "PORIN", "POROUT", "PITREF", "SCL1", "FORDOUT", "FL" ]
+
+
+{-| Which state one named mini-sector is in.
+-}
+stateNamed : String -> Snapshot.CurrentMiniSectorStates -> String
+stateNamed name states =
+    states
+        |> MiniSector.get name
+        |> Maybe.map stateName
+        |> Maybe.withDefault "Absent"
 
 
 {-| The mini-sector strip of the one car every Le Mans fixture here fields.
@@ -592,28 +614,27 @@ leMansCar =
 data leaves one it has no total for. That total places its own mini-sector and
 starts the next, so losing it loses both.
 -}
-leMansFieldMissing : LeMans2025MiniSector -> Duration -> Snapshot
+leMansFieldMissing : String -> Duration -> Snapshot
 leMansFieldMissing missing elapsed =
     Race.fromCars { timeLimit = Instant.raceStart, index = leMansIndex }
         [ { leMansCar | laps = List.map (withoutRunningTotalFor missing) leMansCar.laps } ]
         |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
 
 
-withoutRunningTotalFor : LeMans2025MiniSector -> Lap -> Lap
+withoutRunningTotalFor : String -> Lap -> Lap
 withoutRunningTotalFor missing lap =
     { lap
         | miniSectors =
             lap.miniSectors
                 |> Maybe.map
-                    (LeMans.map2
-                        (\mini times ->
-                            if mini == missing then
-                                { times | elapsedInLap = Nothing }
+                    (List.map
+                        (\entry ->
+                            if entry.name == missing then
+                                { name = entry.name, value = { time = entry.value.time, elapsedInLap = Nothing, personalBest = entry.value.personalBest } }
 
                             else
-                                times
+                                entry
                         )
-                        (LeMans.initialize identity)
                     )
     }
 
@@ -664,19 +685,17 @@ withEvenMiniSectors : Duration -> Lap -> Lap
 withEvenMiniSectors each lap =
     { lap
         | miniSectors =
-            LeMans.initialize
-                (\mini ->
-                    let
-                        position =
-                            LeMans.all
-                                |> List.Extra.elemIndex mini
-                                |> Maybe.withDefault 0
-                    in
-                    { time = Just each
-                    , elapsedInLap = Just (each * (position + 1))
-                    , personalBest = Nothing
+            List.indexedMap
+                (\position name ->
+                    { name = name
+                    , value =
+                        { time = Just each
+                        , elapsedInLap = Just (each * (position + 1))
+                        , personalBest = Nothing
+                        }
                     }
                 )
+                miniSectorNames
                 |> Just
     }
 
