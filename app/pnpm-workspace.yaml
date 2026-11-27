@@ -1,0 +1,3 @@
+# A version becomes installable seven days after it is published, so a hijacked release is usually pulled before it can land here.
+# A fix that cannot wait goes in `minimumReleaseAgeExclude` by name, and comes out once it is a week old.
+minimumReleaseAge: 10080

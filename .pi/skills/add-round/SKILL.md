@@ -49,14 +49,14 @@ Nothing app-side is edited for a new round at a circuit the app already draws.
 
 ## 4. Read the rows back
 
-The integrity checks the load answers with are read out of the rows it wrote; these next checks are against the tables no compiler reads, and are worth querying after a first load of a new round:
+The integrity checks the load answers with are read out of the rows it wrote; these next checks are against the tables no build checks a round against, and are worth querying after a first load of a new round:
 
 ```sql
-SELECT DISTINCT manufacturer FROM entries;  -- against app/static/manufacturers.json
+SELECT DISTINCT manufacturer FROM entries;  -- against data/wec/manufacturers.json
 SELECT DISTINCT class FROM entries;          -- against the era's grid
 ```
 
-- **A manufacturer the hand-written table has no row for stops nothing** — the car keeps the feed's name and takes a colour from its number, and no build fails. Add a row to `manufacturers.json`.
+- **A manufacturer the hand-written table has no row for stops nothing** — the car keeps the feed's name and takes a colour from its number, and no build fails. Add a row to `data/wec/manufacturers.json`.
 - **A Le Mans feed split other than fifteen mini-sectors** reads as `NoMiniSectors` (`byMiniSectorDecoder` requires all fifteen keys) — check the mini-sector columns of a new-season Le Mans CSV before believing a round drawn without them.
 - **Whether the circuit's timing lines still stand** in a new season's map is what the geometry upstream is re-laid against; a map that moved its lines takes a geometry re-lay, and a moved geometry takes every tracker baseline it draws.
 
