@@ -4,7 +4,6 @@ import Expect
 import Internal.ChangePoints as ChangePoints
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Chart.LapDelta as LapDelta
-import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
@@ -13,6 +12,8 @@ import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race as Race
 import Motorsport.Race.Car as Car exposing (Car)
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
+import Motorsport.TestHelpers.Driver exposing (driverNamed)
+import Motorsport.TestHelpers.Lap as TestLap
 import Motorsport.Wec.Class as Class exposing (Class)
 import Motorsport.Wec.Era as Era
 import Test exposing (Test, describe, test)
@@ -138,7 +139,7 @@ carOf carNumber lapLength times =
                 (\index time ->
                     { emptyLap
                         | carNumber = carNumber
-                        , driver = Driver.fromName ("Driver " ++ carNumber)
+                        , driver = driverNamed ("Driver " ++ carNumber)
                         , lap = index + 1
                         , time = Just time
                         , elapsed = Instant.fromDuration (lapLength * (index + 1))
@@ -149,7 +150,7 @@ carOf carNumber lapLength times =
 
 emptyLap : Lap
 emptyLap =
-    Lap.empty
+    TestLap.empty
 
 
 noIndex : Race.Index
@@ -163,7 +164,7 @@ noIndex =
 metadataOf : String -> Car.Metadata
 metadataOf carNumber =
     { carNumber = carNumber
-    , drivers = [ Driver.fromName ("Driver " ++ carNumber) ]
+    , drivers = [ driverNamed ("Driver " ++ carNumber) ]
     , class = Class.fromString Era.Gt3AsThirdClass "HYPERCAR"
     , group = "H"
     , team = "Team " ++ carNumber

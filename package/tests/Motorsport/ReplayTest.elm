@@ -4,7 +4,6 @@ import Expect
 import Internal.ChangePoints as ChangePoints
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Clock as Clock
-import Motorsport.Driver as Driver
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (unknown)
@@ -13,6 +12,8 @@ import Motorsport.Race.Car as Car exposing (Car, CarNumber)
 import Motorsport.Race.Snapshot as Snapshot
 import Motorsport.Replay as Replay
 import Motorsport.Status as Status exposing (Status)
+import Motorsport.TestHelpers.Driver exposing (driverNamed)
+import Motorsport.TestHelpers.Lap as TestLap
 import Motorsport.Wec.Class as Class
 import Test exposing (Test, describe, test)
 import Time exposing (millisToPosix)
@@ -201,7 +202,7 @@ carWith : CarNumber -> List Lap -> Car
 carWith carNumber laps =
     { metadata =
         { carNumber = carNumber
-        , drivers = [ Driver.fromName "Test Driver" ]
+        , drivers = [ driverNamed "Test Driver" ]
         , class = Class.none
         , group = "H"
         , team = "Test Team"
@@ -217,11 +218,11 @@ lapAt : CarNumber -> Int -> Int -> Int -> Lap
 lapAt carNumber lapNumber time elapsed =
     let
         base =
-            Lap.empty
+            TestLap.empty
     in
     { base
         | carNumber = carNumber
-        , driver = Driver.fromName "Test Driver"
+        , driver = driverNamed "Test Driver"
         , lap = lapNumber
         , position = Just 1
         , time = Just time

@@ -365,7 +365,7 @@ row config snapshot paceBounds deltaBounds pitCycle lead ( ahead, item ) =
         [ ordinal item
         , div [ class "col-start-2 row-span-2 self-center" ] [ CarNumberBadge.viewCompact metadata ]
         , div [ class "col-start-3 min-w-0 truncate ps-1.5 text-[11px] font-semibold leading-[18px] tracking-tight", attribute "data-gives-way" "" ]
-            [ text (Driver.toInitialAndSurname item.currentDriver) ]
+            [ text (Driver.initialsAndSurname item.currentDriver) ]
         , gapAhead snapshot ahead item
         , now item
         , div [ class "col-start-3 row-start-2 min-w-0 self-center truncate ps-1.5 text-[11px] leading-[18px] text-muted-foreground", attribute "data-gives-way" "" ]
@@ -492,7 +492,7 @@ rowButton config item picked =
          else
             "false"
         )
-    , title (item.metadata.team ++ " · " ++ Driver.toInitialAndSurname item.currentDriver)
+    , title (item.metadata.team ++ " · " ++ Driver.initialsAndSurname item.currentDriver)
     ]
         ++ (if picked then
                 -- The same mark a row of the standings wears once its car is up.
@@ -768,7 +768,7 @@ stintNote stint =
     [ "S" ++ String.fromInt stint.number
     , "L" ++ String.fromInt stint.firstLap ++ "-L" ++ String.fromInt stint.lastLap
     , String.fromInt stint.lapCount ++ " laps"
-    , Driver.toInitialAndSurname stint.driver
+    , Driver.initialsAndSurname stint.driver
     , case stint.end of
         RaceStint.Ended pit ->
             "pit " ++ Duration.toStringToTenths pit.laneTime

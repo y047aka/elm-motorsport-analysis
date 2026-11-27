@@ -6,6 +6,7 @@ import Motorsport.Analysis.Strategy as Strategy
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race.Car exposing (Car)
+import Motorsport.TestHelpers.Lap as TestLap
 import Motorsport.Wec.Class as Class exposing (Class)
 import Motorsport.Wec.Era as Era
 import Test exposing (Test, describe, test)
@@ -437,7 +438,7 @@ lapAt : Lap.Flag -> Int -> Lap.Crossing -> Lap
 lapAt flag number crossing =
     let
         empty =
-            Lap.empty
+            TestLap.empty
     in
     { empty
         | carNumber = "0"

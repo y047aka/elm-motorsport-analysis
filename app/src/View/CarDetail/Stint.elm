@@ -68,7 +68,7 @@ driverCell metadata summary driver =
             , style "background-color" (driverShade metadata driver)
             ]
             []
-        , div [ class "text-[10px] truncate" ] [ text (Driver.toSurname driver) ]
+        , div [ class "text-[10px] truncate" ] [ text (Driver.surnameOnly driver) ]
         , div [ class "text-[10px] tabular-nums text-muted-foreground" ]
             [ text (String.fromInt (AnalysisStint.lapsDrivenBy driver summary)) ]
         ]
@@ -163,7 +163,7 @@ stintTitle stint =
     [ "Stint " ++ String.fromInt stint.number
     , "L" ++ String.fromInt stint.firstLap ++ "-L" ++ String.fromInt stint.lastLap
     , inLaps stint.lapCount
-    , Driver.toFullName stint.driver
+    , Driver.fullName stint.driver
     , case stint.end of
         RaceStint.Ended pit ->
             "pit " ++ Duration.toStringToTenths pit.laneTime

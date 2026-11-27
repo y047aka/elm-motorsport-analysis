@@ -12,12 +12,13 @@ module Data.Wec.Laps exposing
 
 -}
 
+import Decode.Driver as Driver
 import Dict exposing (Dict)
 import Internal.Jsonl as Jsonl
 import Json.Decode as Decode exposing (Decoder, int, string)
 import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (optional, required)
-import Motorsport.Driver as Driver
+import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
@@ -28,7 +29,7 @@ import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector)
 
 type alias RawLap =
     { carNumber : String
-    , driverName : String
+    , driver : Driver
     , lapNumber : Int
     , position : Int
     , lapTime : Duration
@@ -66,7 +67,7 @@ rawLapDecoder : Decoder RawLap
 rawLapDecoder =
     Decode.succeed RawLap
         |> required "carNumber" string
-        |> required "driverName" string
+        |> required "driverName" Driver.decoder
         |> required "lapNumber" int
         |> required "position" int
         |> required "lap" (Decode.field "time" durationDecoder)
@@ -299,7 +300,7 @@ accumulate raw ( bests, acc ) =
 
         lap =
             { carNumber = raw.carNumber
-            , driver = Driver.fromName raw.driverName
+            , driver = raw.driver
             , lap = raw.lapNumber
             , position =
                 -- A crossing the feed could not rank arrives as `0`, like the

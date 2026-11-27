@@ -147,7 +147,7 @@ stintBlock baselines isMostRecent ( stint, lines ) =
                     [ div [ class "text-[11px] uppercase tracking-[0.03em] text-muted-foreground shrink-0" ]
                         [ text ("Stint " ++ String.fromInt stint.number) ]
                     , div [ class "text-[11px] text-foreground/90 truncate" ]
-                        [ text (Driver.toInitialAndSurname stint.driver) ]
+                        [ text (Driver.initialsAndSurname stint.driver) ]
                     , placeTally stint
                     ]
                 , div [ class "text-[11px] tabular-nums text-muted-foreground" ]

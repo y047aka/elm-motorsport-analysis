@@ -4,7 +4,6 @@ import Expect
 import Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import List.Extra
 import Motorsport.BestTimes as BestTimes
-import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
@@ -16,6 +15,8 @@ import Motorsport.Race.Car as Car exposing (Car)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Lane, Snapshot)
 import Motorsport.Sector as Sector exposing (Sector(..))
 import Motorsport.Status as Status exposing (Status)
+import Motorsport.TestHelpers.Driver exposing (driverNamed)
+import Motorsport.TestHelpers.Lap as TestLap
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Motorsport.Wec.Class as Class exposing (Class)
 import Motorsport.Wec.Era as Era
@@ -351,7 +352,7 @@ suite =
                 \_ ->
                     laneOf "9" handingOver 13000
                         |> Maybe.map .handover
-                        |> Expect.equal (Just (Just ( Driver.fromName "Driver 9", Driver.fromName "Mike CONWAY" )))
+                        |> Expect.equal (Just (Just ( driverNamed "Driver 9", driverNamed "Mike CONWAY" )))
             , test "two laps naming the same driver made no handover" <|
                 \_ ->
                     laneOf "9" stopping 13000
@@ -469,7 +470,7 @@ changes held =
                 , { time = change.time
                   , carNumber = change.car
                   , lap = change.lap
-                  , driver = Driver.fromName ("Driver " ++ change.car)
+                  , driver = driverNamed ("Driver " ++ change.car)
                   }
                 )
             )
@@ -752,7 +753,7 @@ classOf =
 metadataOf : String -> Class -> Car.Metadata
 metadataOf carNumber class =
     { carNumber = carNumber
-    , drivers = [ Driver.fromName ("Driver " ++ carNumber) ]
+    , drivers = [ driverNamed ("Driver " ++ carNumber) ]
     , class = class
     , group = "H"
     , team = "Team " ++ carNumber
@@ -769,7 +770,7 @@ lapOf : String -> Int -> Duration -> Duration -> { s1 : Duration, s2 : Duration,
 lapOf carNumber lapNumber time elapsed sectors =
     { empty
         | carNumber = carNumber
-        , driver = Driver.fromName ("Driver " ++ carNumber)
+        , driver = driverNamed ("Driver " ++ carNumber)
         , lap = lapNumber
         , position = Just 1
         , time = Just time
@@ -796,7 +797,7 @@ lapOf carNumber lapNumber time elapsed sectors =
 
 empty : Lap
 empty =
-    Lap.empty
+    TestLap.empty
 
 
 {-| A race long enough that nothing here reads as over, held at a car of its own
@@ -893,4 +894,4 @@ pitLapOf carNumber lapNumber time elapsed pit =
 
 drivenBy : String -> Lap -> Lap
 drivenBy name lap =
-    { lap | driver = Driver.fromName name }
+    { lap | driver = driverNamed name }

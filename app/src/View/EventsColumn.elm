@@ -208,7 +208,7 @@ body event theCar =
         -- With no car row it says the generic line.
         ( CarEvent _ DriverChange, Just car ) ->
             TimelineEvent.handover car event
-                |> Maybe.map (\( handedOver, tookOver ) -> Driver.toHandover handedOver tookOver)
+                |> Maybe.map (\( handedOver, tookOver ) -> Driver.handover handedOver tookOver)
                 |> Maybe.withDefault (TimelineEvent.describe event.eventType)
                 |> text
 
@@ -233,7 +233,7 @@ fastestLap event =
         Just lap ->
             div [ Attributes.class "grid gap-y-1" ]
                 [ span [] <|
-                    [ text ("Class Fastest Lap · " ++ Driver.toInitialAndSurname (Driver.fromName lap.driver)) ]
+                    [ text ("Class Fastest Lap · " ++ Driver.initialsAndSurname lap.driver) ]
                         ++ Maybe.withDefault []
                             (Maybe.map
                                 (\t ->

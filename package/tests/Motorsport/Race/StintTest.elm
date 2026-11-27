@@ -1,12 +1,13 @@
 module Motorsport.Race.StintTest exposing (suite)
 
 import Expect
-import Motorsport.Driver as Driver
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (unknown)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.Stint as Stint exposing (End(..))
+import Motorsport.TestHelpers.Driver exposing (driverNamed)
+import Motorsport.TestHelpers.Lap as TestLap
 import Motorsport.Wec.Class as Class
 import Test exposing (Test, describe, test)
 
@@ -196,9 +197,9 @@ empty : Lap
 empty =
     let
         base =
-            Lap.empty
+            TestLap.empty
     in
-    { base | carNumber = "7", driver = Driver.fromName "Kamui KOBAYASHI" }
+    { base | carNumber = "7", driver = driverNamed "Kamui KOBAYASHI" }
 
 
 {-| The laps an index is read off carry the moment they were completed, which
@@ -231,7 +232,7 @@ carWith : CarNumber -> List Lap -> Car
 carWith carNumber laps =
     { metadata =
         { carNumber = carNumber
-        , drivers = [ Driver.fromName "Kamui KOBAYASHI" ]
+        , drivers = [ driverNamed "Kamui KOBAYASHI" ]
         , class = Class.none
         , group = "H"
         , team = "Test Team"

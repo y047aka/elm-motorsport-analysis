@@ -6,6 +6,7 @@ import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.LapRange exposing (LapRange)
+import Motorsport.TestHelpers.Lap as TestLap
 import Test exposing (Test, describe, test)
 
 
@@ -116,4 +117,4 @@ stopping lapNumber elapsed =
 
 emptyLap : Lap
 emptyLap =
-    Lap.empty
+    TestLap.empty

@@ -1,102 +1,53 @@
 module Motorsport.Driver exposing
-    ( Driver, fromName, unknown
+    ( Driver, fromName
     , isSame, changeBetween
-    , toFullName, toInitialAndSurname, toSurname
-    , toHandover
+    , fullName, initialsAndSurname, surnameOnly, handover
     )
 
-{-|
+{-| A driver, and the ways their name is written.
 
-@docs Driver, fromName, unknown
+Every spelling here uppercases the surname (`PersonName.Format`).
+
+@docs Driver, fromName
 @docs isSame, changeBetween
-@docs toFullName, toInitialAndSurname, toSurname
-@docs toHandover
+@docs fullName, initialsAndSurname, surnameOnly, handover
 
 -}
 
-import List.Extra
+import PersonName exposing (PersonName)
+import PersonName.Format as Format
 
 
-{-| A driver, identified by the name the source data gives.
+{-| A driver, identified by the person's name.
 -}
 type Driver
-    = Driver Name
+    = Driver PersonName
 
 
-type alias Name =
-    { given : List String
-    , family : List String
-    }
-
-
-{-| Build a driver from a full name as the source data spells it.
-
-The source data uppercases the surname (`Kamui KOBAYASHI`), so case — not word
-position — marks where it begins. That matters for the compound surnames and
-multi-word given names in WEC entry lists: `Jose Maria LOPEZ` splits after
-`Maria`.
-
-Where case says nothing — no uppercase word (`Kamui Kobayashi`), or the first
-word uppercase (`PJ HYETT`) — the last word is taken as the surname.
-
+{-| The driver named by a person's name.
 -}
-fromName : String -> Driver
-fromName fullName =
-    let
-        tokens =
-            String.words fullName
-    in
-    Driver <|
-        case List.Extra.splitWhen isUppercaseToken tokens of
-            Just ( given, family ) ->
-                if List.isEmpty given then
-                    splitAtLastToken tokens
-
-                else
-                    { given = given, family = family }
-
-            Nothing ->
-                splitAtLastToken tokens
+fromName : PersonName -> Driver
+fromName =
+    Driver
 
 
-splitAtLastToken : List String -> Name
-splitAtLastToken tokens =
-    case List.Extra.unconsLast tokens of
-        Just ( family, given ) ->
-            { given = given, family = [ family ] }
+{-| Whether two drivers are the same person.
 
-        Nothing ->
-            { given = [], family = [] }
+Namesakes are indistinguishable, and the name is compared as written, so one person spelled two ways is two drivers: the timing files hold both `Antonio FELIX DA COSTA` and `António FÉLIX DA COSTA`.
 
+    import PersonName.Parse exposing (fromUppercasedSurname)
 
-{-| Requires letters, so digits and punctuation are never taken for a surname.
--}
-isUppercaseToken : String -> Bool
-isUppercaseToken token =
-    (String.toUpper token /= String.toLower token)
-        && (token == String.toUpper token)
+    sameName : String -> String -> Maybe Bool
+    sameName a b =
+        Maybe.map2 (\one another -> isSame (fromName one) (fromName another))
+            (fromUppercasedSurname a)
+            (fromUppercasedSurname b)
 
+    sameName "Kamui KOBAYASHI" "Kamui KOBAYASHI"
+    --> Just True
 
-{-| Stands in for a driver the source data does not name. Displays as an empty
-string.
-
-    toFullName unknown
-    --> ""
-
--}
-unknown : Driver
-unknown =
-    fromName ""
-
-
-{-| Whether two drivers are the same person. Identity rests on the name alone,
-so namesakes are indistinguishable.
-
-    isSame (fromName "Kamui KOBAYASHI") (fromName "Kamui KOBAYASHI")
-    --> True
-
-    isSame (fromName "Kamui KOBAYASHI") (fromName "Nyck DE VRIES")
-    --> False
+    sameName "Kamui KOBAYASHI" "Nyck DE VRIES"
+    --> Just False
 
 -}
 isSame : Driver -> Driver -> Bool
@@ -104,14 +55,25 @@ isSame a b =
     a == b
 
 
-{-| The handover of a car between two named drivers: the pair, when the two are
-two different people.
+{-| The handover of a car between two drivers: the pair, when they are not the same person.
 
-    changeBetween (fromName "Sebastian BUEMI") (fromName "Sebastian BUEMI")
+    import PersonName.Parse exposing (fromUppercasedSurname)
+
+    change : String -> String -> Maybe String
+    change a b =
+        Maybe.map2
+            (\handedOver tookOver ->
+                Maybe.map (\( before, after ) -> initialsAndSurname before ++ " → " ++ initialsAndSurname after) (changeBetween handedOver tookOver)
+            )
+            (fromUppercasedSurname a |> Maybe.map fromName)
+            (fromUppercasedSurname b |> Maybe.map fromName)
+            |> Maybe.withDefault Nothing
+
+    change "Sebastian BUEMI" "Sebastian BUEMI"
     --> Nothing
 
-    changeBetween (fromName "Sebastian BUEMI") (fromName "Kamui KOBAYASHI")
-    --> Just ( fromName "Sebastian BUEMI", fromName "Kamui KOBAYASHI" )
+    change "Sebastian BUEMI" "Kamui KOBAYASHI"
+    --> Just "S.BUEMI → K.KOBAYASHI"
 
 -}
 changeBetween : Driver -> Driver -> Maybe ( Driver, Driver )
@@ -123,84 +85,89 @@ changeBetween handedOver tookOver =
         Just ( handedOver, tookOver )
 
 
+{-| The whole name.
 
--- DISPLAY
---
--- Three renderings of one name, longest first, differing only in how much of the
--- given name survives. The surname is always present and always uppercased.
+    import PersonName.Parse exposing (fromUppercasedSurname)
 
+    shown : String -> Maybe String
+    shown =
+        fromUppercasedSurname >> Maybe.map (fromName >> fullName)
 
-{-| Keep the given name in full.
+    shown "Kamui Kobayashi"
+    --> Just "Kamui KOBAYASHI"
 
-    toFullName (fromName "Kamui Kobayashi")
-    --> "Kamui KOBAYASHI"
+    shown "Jose Maria LOPEZ"
+    --> Just "Jose Maria LOPEZ"
 
-    toFullName (fromName "Jose Maria LOPEZ")
-    --> "Jose Maria LOPEZ"
-
-    toFullName (fromName "Kobayashi")
-    --> "KOBAYASHI"
-
--}
-toFullName : Driver -> String
-toFullName (Driver parts) =
-    String.join " " (parts.given ++ List.map String.toUpper parts.family)
-
-
-{-| Abbreviate each given name to an initial. For narrow columns.
-
-    toInitialAndSurname (fromName "Kamui Kobayashi")
-    --> "K.KOBAYASHI"
-
-    toInitialAndSurname (fromName "Kelvin VAN DER LINDE")
-    --> "K.VAN DER LINDE"
-
-    toInitialAndSurname (fromName "Jose Maria LOPEZ")
-    --> "J.M.LOPEZ"
-
-    toInitialAndSurname (fromName "Kobayashi")
-    --> "KOBAYASHI"
+    shown "Kelvin VAN DER LINDE"
+    --> Just "Kelvin VAN DER LINDE"
 
 -}
-toInitialAndSurname : Driver -> String
-toInitialAndSurname (Driver parts) =
-    String.join "." (List.map (String.left 1) parts.given ++ [ surnameOf parts ])
+fullName : Driver -> String
+fullName (Driver person) =
+    Format.format { given = Format.Full, separator = " " } person
 
 
-{-| Drop the given name entirely. For the narrowest lists.
+{-| Each given name an initial, nothing between them.
 
-    toSurname (fromName "Kamui Kobayashi")
-    --> "KOBAYASHI"
+    import PersonName.Parse exposing (fromUppercasedSurname)
 
-    toSurname (fromName "Kelvin VAN DER LINDE")
-    --> "VAN DER LINDE"
+    shown : String -> Maybe String
+    shown =
+        fromUppercasedSurname >> Maybe.map (fromName >> initialsAndSurname)
 
-    toSurname (fromName "PJ HYETT")
-    --> "HYETT"
+    shown "Kamui Kobayashi"
+    --> Just "K.KOBAYASHI"
 
-    toSurname (fromName "Kobayashi")
-    --> "KOBAYASHI"
+    shown "Jose Maria LOPEZ"
+    --> Just "J.M.LOPEZ"
 
--}
-toSurname : Driver -> String
-toSurname (Driver parts) =
-    surnameOf parts
+    shown "Kelvin VAN DER LINDE"
+    --> Just "K.VAN DER LINDE"
 
-
-surnameOf : Name -> String
-surnameOf parts =
-    parts.family
-        |> List.map String.toUpper
-        |> String.join " "
-
-
-{-| A driver change, spelled the way a timing sheet prints one: who handed the
-car over, and who took it on.
-
-    toHandover (fromName "Sebastian BUEMI") (fromName "Kamui Kobayashi")
-    --> "S.BUEMI → K.KOBAYASHI"
+    shown "Kobayashi"
+    --> Just "KOBAYASHI"
 
 -}
-toHandover : Driver -> Driver -> String
-toHandover handedOver tookOver =
-    toInitialAndSurname handedOver ++ " → " ++ toInitialAndSurname tookOver
+initialsAndSurname : Driver -> String
+initialsAndSurname (Driver person) =
+    Format.format { given = Format.Initials ".", separator = "" } person
+
+
+{-| Nothing but the surname.
+
+    import PersonName.Parse exposing (fromUppercasedSurname)
+
+    shown : String -> Maybe String
+    shown =
+        fromUppercasedSurname >> Maybe.map (fromName >> surnameOnly)
+
+    shown "Kamui Kobayashi"
+    --> Just "KOBAYASHI"
+
+    shown "Kelvin VAN DER LINDE"
+    --> Just "VAN DER LINDE"
+
+-}
+surnameOnly : Driver -> String
+surnameOnly (Driver person) =
+    Format.format { given = Format.Omitted, separator = " " } person
+
+
+{-| A driver change, spelled out: who handed the car over, and who took it on.
+
+    import PersonName.Parse exposing (fromUppercasedSurname)
+
+    change : String -> String -> Maybe String
+    change handedOver tookOver =
+        Maybe.map2 handover
+            (fromUppercasedSurname handedOver |> Maybe.map fromName)
+            (fromUppercasedSurname tookOver |> Maybe.map fromName)
+
+    change "Sebastian BUEMI" "Kamui Kobayashi"
+    --> Just "S.BUEMI → K.KOBAYASHI"
+
+-}
+handover : Driver -> Driver -> String
+handover handedOver tookOver =
+    initialsAndSurname handedOver ++ " → " ++ initialsAndSurname tookOver

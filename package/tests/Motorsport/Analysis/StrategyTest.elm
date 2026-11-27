@@ -3,12 +3,13 @@ module Motorsport.Analysis.StrategyTest exposing (suite)
 import Expect
 import Motorsport.Analysis.Stint as Stint
 import Motorsport.Analysis.Strategy as Strategy
-import Motorsport.Driver as Driver
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.Stint exposing (Stint)
 import Motorsport.Status as Status
+import Motorsport.TestHelpers.Driver exposing (driverNamed)
+import Motorsport.TestHelpers.Lap as TestLap
 import Motorsport.Wec.Class as Class exposing (Class)
 import Motorsport.Wec.Era as Era
 import Test exposing (Test, describe, test)
@@ -205,7 +206,7 @@ carAt : String -> String -> List Int -> List Int -> Int -> Car
 carAt carNumber class stops held lapCount =
     { metadata =
         { carNumber = carNumber
-        , drivers = [ Driver.fromName ("Driver " ++ carNumber) ]
+        , drivers = [ driverNamed ("Driver " ++ carNumber) ]
         , class = classOf class
         , group = "H"
         , team = "Team " ++ carNumber
@@ -227,7 +228,7 @@ lapsOfWith stops held lapCount =
             (\lapNumber ->
                 { emptyLap
                     | carNumber = "0"
-                    , driver = Driver.fromName "Driver"
+                    , driver = driverNamed "Driver"
                     , lap = lapNumber
                     , time = Just 5000
                     , flag =
@@ -261,7 +262,7 @@ sumByLaps =
 
 emptyLap : Lap
 emptyLap =
-    Lap.empty
+    TestLap.empty
 
 
 classOf : String -> Class

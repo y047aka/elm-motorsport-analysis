@@ -375,7 +375,7 @@ row config item =
     , position = item.standing.position
     , isInPit = item.status == Status.InPit
     , hasColumn = List.member item.metadata.carNumber config.withColumns
-    , driver = Driver.toInitialAndSurname item.currentDriver
+    , driver = Driver.initialsAndSurname item.currentDriver
     , ahead = Gap.toString item.standing.intervalToAhead
     , last = lastLapTime.text
     , lastColor = lastLapTime.color

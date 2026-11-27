@@ -18,11 +18,12 @@ Read out of the round's timeline file, which `Round.Timeline` writes.
 
 -}
 
+import Decode.Driver as DecodeDriver
 import Internal.Jsonl as Jsonl
 import Json.Decode as Decode exposing (Decoder, field, string)
 import Json.Decode.Pipeline exposing (required)
-import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Driver as Driver exposing (Driver)
+import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Flag as Flag exposing (Flag)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
@@ -49,10 +50,9 @@ type alias Rated =
 {-| `miniSectors` is `Nothing` where the round's feed measured no mini-sectors, which is
 the lap drawn on the three sectors. Whether the circuit is drawn from a survey is a
 different fact: a surveyed circuit can be timed no finer than three sectors.
-
 -}
 type alias LapDetail =
-    { driver : String
+    { driver : Driver
     , lap : Rated
     , sectors : BySector Rated
     , miniSectors : Maybe (ByMiniSector Rated)
@@ -223,12 +223,11 @@ withLapDetail event =
 
 {-| The lap an event fell on, which sits flat beside the event rather than under a key
 of its own.
-
 -}
 lapDetailDecoder : Decoder LapDetail
 lapDetailDecoder =
     Decode.map4 LapDetail
-        (field "driver" Decode.string)
+        (field "driver" DecodeDriver.decoder)
         (field "performance" (field "lap" ratedDecoder))
         (field "performance" (field "sectors" ratedBySectorDecoder))
         (Decode.maybe (field "performance" (field "miniSectors" ratedByMiniSectorDecoder)))
@@ -244,7 +243,6 @@ ratedDecoder =
 
 {-| A time the feed wrote none for is the empty string on the wire, and no segment of
 the circuit.
-
 -}
 optionalDurationDecoder : Decoder (Maybe Duration)
 optionalDurationDecoder =

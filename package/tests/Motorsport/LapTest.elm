@@ -5,6 +5,7 @@ import List.Extra
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Sector as Sector exposing (Sector(..))
+import Motorsport.TestHelpers.Lap as TestLap
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Test exposing (..)
 
@@ -77,7 +78,7 @@ indexOf mini =
 
 empty : Lap
 empty =
-    Lap.empty
+    TestLap.empty
 
 
 {-| The fixtures are written in plain milliseconds and lifted to

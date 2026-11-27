@@ -154,7 +154,7 @@ classBadge item =
 currentDriver : CarAt -> Html msg
 currentDriver item =
     div [ class "text-[11px] truncate" ]
-        [ text (Driver.toInitialAndSurname item.currentDriver) ]
+        [ text (Driver.initialsAndSurname item.currentDriver) ]
 
 
 statusBadge : Status -> Html msg

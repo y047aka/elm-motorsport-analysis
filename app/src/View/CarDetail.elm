@@ -272,7 +272,7 @@ legendEntry snapshot focused inFront item =
             [ text (Position.toOrdinal item.standing.positionInClass) ]
         , CarNumberBadge.viewRow item.metadata
         , div [ class "text-[11px] truncate" ]
-            [ text (Driver.toInitialAndSurname item.currentDriver) ]
+            [ text (Driver.initialsAndSurname item.currentDriver) ]
         , div [ class "text-[12px] tabular-nums whitespace-nowrap" ]
             [ text (Gap.toString (gapOf snapshot inFront item)) ]
         ]

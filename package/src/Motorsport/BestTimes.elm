@@ -20,10 +20,11 @@ arrives with the round's summary.
 
 -}
 
+import Decode.Driver as Driver
 import Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Json.Decode as Decode exposing (Decoder, field)
 import Json.Decode.Pipeline exposing (required)
-import Motorsport.Driver as Driver exposing (Driver)
+import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Sector as Sector exposing (BySector)
@@ -136,7 +137,7 @@ holderDecoder =
             (field "time" durationDecoder)
             (field "carNumber" Decode.string)
             (field "lap" Decode.int)
-            (field "driver" (Decode.map Driver.fromName Decode.string))
+            (field "driver" Driver.decoder)
         )
 
 

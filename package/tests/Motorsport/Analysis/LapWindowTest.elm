@@ -4,7 +4,6 @@ import Expect
 import Internal.ChangePoints as ChangePoints
 import Motorsport.Analysis.LapWindow as LapWindow
 import Motorsport.BestTimes as BestTimes
-import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
@@ -12,6 +11,8 @@ import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race as Race
 import Motorsport.Race.Car as Car exposing (Car)
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
+import Motorsport.TestHelpers.Driver exposing (driverNamed)
+import Motorsport.TestHelpers.Lap as TestLap
 import Motorsport.Wec.Class as Class exposing (Class)
 import Motorsport.Wec.Era as Era
 import Test exposing (Test, describe, test)
@@ -91,7 +92,7 @@ lapOf : String -> Int -> Duration -> Lap
 lapOf carNumber lapNumber elapsed =
     { emptyLap
         | carNumber = carNumber
-        , driver = Driver.fromName ("Driver " ++ carNumber)
+        , driver = driverNamed ("Driver " ++ carNumber)
         , lap = lapNumber
         , position = Just 1
         , time = Just 5000
@@ -101,7 +102,7 @@ lapOf carNumber lapNumber elapsed =
 
 emptyLap : Lap
 emptyLap =
-    Lap.empty
+    TestLap.empty
 
 
 {-| The records a round arrives with, which nothing here reads.
@@ -122,7 +123,7 @@ classOf =
 metadataOf : String -> Class -> Car.Metadata
 metadataOf carNumber class =
     { carNumber = carNumber
-    , drivers = [ Driver.fromName ("Driver " ++ carNumber) ]
+    , drivers = [ driverNamed ("Driver " ++ carNumber) ]
     , class = class
     , group = "H"
     , team = "Team " ++ carNumber

@@ -2,8 +2,9 @@ module Motorsport.Analysis.StintTest exposing (suite)
 
 import Expect
 import Motorsport.Analysis.Stint as Stint
-import Motorsport.Driver as Driver
 import Motorsport.Lap as Lap exposing (Lap)
+import Motorsport.TestHelpers.Driver exposing (driverNamed)
+import Motorsport.TestHelpers.Lap as TestLap
 import Test exposing (Test, describe, test)
 
 
@@ -62,7 +63,7 @@ suite =
                     , lap 5 95000 |> drivenBy "Mike CONWAY"
                     ]
                         |> Stint.summarize
-                        |> Stint.lapsDrivenBy (Driver.fromName "Mike CONWAY")
+                        |> Stint.lapsDrivenBy (driverNamed "Mike CONWAY")
                         |> Expect.equal 2
             ]
         ]
@@ -85,13 +86,13 @@ outLap lapNumber time stop =
 
 drivenBy : String -> Lap -> Lap
 drivenBy name aLap =
-    { aLap | driver = Driver.fromName name }
+    { aLap | driver = driverNamed name }
 
 
 empty : Lap
 empty =
     let
         base =
-            Lap.empty
+            TestLap.empty
     in
-    { base | carNumber = "7", driver = Driver.fromName "Kamui KOBAYASHI" }
+    { base | carNumber = "7", driver = driverNamed "Kamui KOBAYASHI" }

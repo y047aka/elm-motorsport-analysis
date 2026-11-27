@@ -3,13 +3,15 @@ module Motorsport.Race.TimelineEventTest exposing (suite)
 import Expect
 import Json.Decode as Decode
 import Motorsport.Duration as Duration
-import Motorsport.Driver as Driver exposing (Driver)
+import Motorsport.Driver exposing (Driver)
 import Motorsport.Flag exposing (Flag(..))
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..))
+import Motorsport.TestHelpers.Driver exposing (driverNamed)
+import Motorsport.TestHelpers.Lap as TestLap
 import Motorsport.Wec.Class as Class
 import Motorsport.Wec.Circuit.LeMans as LeMans
 import Test exposing (Test, describe, test)
@@ -107,7 +109,7 @@ lapDetail =
                     |> Expect.equal
                         (Ok
                             (Just
-                                { driver = "Philip HANSON"
+                                { driver = driverNamed "Philip HANSON"
                                 , lap = rated "3:08.310" "3:08.310" "3:08.310"
                                 , sectors =
                                     { s1 = rated "40.152" "40.152" "40.152"
@@ -282,24 +284,24 @@ handover =
 
 kobayashi : Driver
 kobayashi =
-    Driver.fromName "Kamui KOBAYASHI"
+    driverNamed "Kamui KOBAYASHI"
 
 
 conway : Driver
 conway =
-    Driver.fromName "Mike CONWAY"
+    driverNamed "Mike CONWAY"
 
 
 buemi : Driver
 buemi =
-    Driver.fromName "Sebastian BUEMI"
+    driverNamed "Sebastian BUEMI"
 
 
 lapOf : Int -> Driver -> Int -> Lap
 lapOf lapNumber driver elapsed =
     let
         base =
-            Lap.empty
+            TestLap.empty
     in
     { base | lap = lapNumber, driver = driver, elapsed = Instant.fromDuration elapsed }
 

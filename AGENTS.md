@@ -108,6 +108,7 @@ Where a new module goes:
 - `Simulation/` — a model run on figures chosen rather than measured: what it hands back is an assumption fitted to the races, never a reading of one. Models are grouped by what they model (`Pace.ReferenceLap`, `Pace.Neutralisation`).
 - Directly under `Motorsport/` — serves both sides, so neither owns it (`BestTimes`, `Lap.Performance`).
 - `Wec/` — WEC-specific knowledge: classes and eras, circuits. The core still imports out of `Wec/` (`rg 'import Motorsport.Wec' package/src` lists where); reversing that arrow is its own change.
+- Outside `Motorsport/` — `PersonName` and `NonEmpty` know no sport and publish alone (the import rule is `PersonName.elm`'s header's). `Decode/` holds the read of a domain type out of a feed: a driver's name arrives through `Decode.Driver.decoder`, and `Motorsport/Driver` itself imports no JSON.
 
 There is no view-model layer above `Race.Snapshot`: `Snapshot.at` runs once per frame and every view reads a `CarAt` straight off it. A record per car on top cost under 2% of the frame (`benchmark/PerFrameBenchmark.elm`), so nothing sits above it; colours and geometry are the view's own.
 

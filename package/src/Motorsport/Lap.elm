@@ -1,5 +1,5 @@
 module Motorsport.Lap exposing
-    ( Lap, empty
+    ( Lap
     , SectorTime, SectorTimes
     , MiniSectors, MiniSectorTime
     , recorded
@@ -15,7 +15,7 @@ module Motorsport.Lap exposing
 
 {-|
 
-@docs Lap, empty
+@docs Lap
 @docs SectorTime, SectorTimes
 @docs MiniSectors, MiniSectorTime
 @docs recorded
@@ -44,7 +44,7 @@ module Motorsport.Lap exposing
 
 import Compare exposing (Comparator)
 import List.Extra
-import Motorsport.Driver as Driver exposing (Driver)
+import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.PitStop exposing (PitStop)
@@ -103,22 +103,6 @@ type alias MiniSectorTime =
     { time : Maybe Duration
     , elapsedInLap : Maybe Duration
     , personalBest : Maybe Duration
-    }
-
-
-empty : Lap
-empty =
-    { carNumber = ""
-    , driver = Driver.unknown
-    , lap = 0
-    , position = Nothing
-    , time = Nothing
-    , sectors = Sector.initialize (always { time = Nothing, personalBest = Nothing })
-    , best = Nothing
-    , elapsed = Instant.raceStart
-    , crossing = NoCrossing
-    , flag = Green
-    , miniSectors = Nothing
     }
 
 
@@ -312,7 +296,9 @@ between them.
 `Nothing` on the lap the car came in on and on every lap between stops -- only
 the lap the car came back out on times a stop.
 
-    pitStopOf empty
+    import Motorsport.TestHelpers.Lap as TestLap
+
+    pitStopOf TestLap.empty
     --> Nothing
 
 -}

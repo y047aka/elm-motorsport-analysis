@@ -11,10 +11,11 @@ module Data.Wec exposing
 -}
 
 import Data.Wec.Manufacturer as Manufacturer exposing (Manufacturers)
+import Decode.Driver as Driver
 import Json.Decode as Decode exposing (Decoder, field, float, int, list, string)
 import Json.Decode.Pipeline exposing (optional, required)
 import Motorsport.Chart.Tracker.Config exposing (MiniSectorShares(..), Share, TrackConfig)
-import Motorsport.Driver as Driver exposing (Driver)
+import Motorsport.Driver exposing (Driver)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Race as Race
 import Motorsport.Race.Car as Car
@@ -227,14 +228,8 @@ carMetadataDecoder era manufacturers carImageUrl =
             }
         )
         |> required "carNumber" string
-        |> required "drivers" (Decode.list driverDecoder)
+        |> required "drivers" (Decode.list (field "name" Driver.decoder))
         |> required "class" (string |> Decode.map (Class.fromString era))
         |> required "group" string
         |> required "team" string
         |> required "manufacturer" string
-
-
-driverDecoder : Decoder Driver
-driverDecoder =
-    Decode.map Driver.fromName
-        (field "name" string)

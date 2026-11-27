@@ -2,7 +2,7 @@ module Motorsport.Analysis.CarLogTest exposing (suite)
 
 import Expect
 import Motorsport.Analysis.CarLog as CarLog
-import Motorsport.Driver as Driver exposing (Driver)
+import Motorsport.Driver exposing (Driver)
 import Motorsport.Flag exposing (Flag(..))
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
@@ -11,6 +11,8 @@ import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
+import Motorsport.TestHelpers.Driver exposing (driverNamed)
+import Motorsport.TestHelpers.Lap as TestLap
 import Motorsport.Wec.Class as Class
 import Test exposing (Test, describe, test)
 
@@ -239,18 +241,18 @@ carWith laps =
 
 kobayashi : Driver
 kobayashi =
-    Driver.fromName "Kamui KOBAYASHI"
+    driverNamed "Kamui KOBAYASHI"
 
 
 conway : Driver
 conway =
-    Driver.fromName "Mike CONWAY"
+    driverNamed "Mike CONWAY"
 
 
 empty : Lap
 empty =
     let
         base =
-            Lap.empty
+            TestLap.empty
     in
     { base | carNumber = "7", driver = kobayashi }

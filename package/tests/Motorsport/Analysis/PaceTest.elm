@@ -4,6 +4,7 @@ import Expect
 import Motorsport.Analysis.Pace as Pace
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap exposing (Lap)
+import Motorsport.TestHelpers.Lap as TestLap
 import Test exposing (Test, describe, test)
 
 
@@ -133,4 +134,4 @@ untimedLapAt lapNumber =
 
 emptyLap : Lap
 emptyLap =
-    Lap.empty
+    TestLap.empty

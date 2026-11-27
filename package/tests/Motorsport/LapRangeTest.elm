@@ -3,6 +3,7 @@ module Motorsport.LapRangeTest exposing (suite)
 import Expect
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.LapRange as LapRange
+import Motorsport.TestHelpers.Lap as TestLap
 import Test exposing (Test, describe, test)
 
 
@@ -37,4 +38,4 @@ lapNumbered lapNumber =
 
 emptyLap : Lap
 emptyLap =
-    Lap.empty
+    TestLap.empty

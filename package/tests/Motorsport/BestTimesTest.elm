@@ -8,7 +8,6 @@ back at a moment of the race.
 import Expect
 import Json.Decode as Decode
 import Motorsport.BestTimes as BestTimes exposing (Changes, Holder, Snapshot)
-import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant
 import Motorsport.Sector as Sector exposing (Sector(..))

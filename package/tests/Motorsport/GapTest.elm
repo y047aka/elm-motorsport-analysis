@@ -5,6 +5,7 @@ import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
+import Motorsport.TestHelpers.Lap as TestLap
 import Test exposing (..)
 
 
@@ -71,7 +72,7 @@ delayBy delay l =
 
 empty : Lap
 empty =
-    Lap.empty
+    TestLap.empty
 
 
 tests : Test

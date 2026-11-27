@@ -117,7 +117,7 @@ viewDriverAndTeam_Wec { metadata, currentDriver } =
                                    )
                             )
                         ]
-                        [ text (Driver.toInitialAndSurname driver) ]
+                        [ text (Driver.initialsAndSurname driver) ]
                 )
                 metadata.drivers
         ]

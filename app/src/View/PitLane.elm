@@ -93,10 +93,10 @@ row ( car, lane ) =
         who =
             case lane.handover of
                 Just ( handedOver, tookOver ) ->
-                    Driver.toHandover handedOver tookOver
+                    Driver.handover handedOver tookOver
 
                 Nothing ->
-                    Driver.toInitialAndSurname car.currentDriver
+                    Driver.initialsAndSurname car.currentDriver
 
         chip classes label =
             span [ class ("inline-flex items-center justify-center rounded-full border px-1.5 text-[9px] font-bold leading-4 " ++ classes) ]

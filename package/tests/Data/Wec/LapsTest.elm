@@ -2,12 +2,12 @@ module Data.Wec.LapsTest exposing (suite)
 
 import Data.Wec.Laps as Laps exposing (RawLap)
 import Expect
-import Motorsport.Driver as Driver
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap
 import Motorsport.Manufacturer exposing (unknown)
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Sector as Sector
+import Motorsport.TestHelpers.Driver exposing (driverNamed)
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Motorsport.Wec.Class as Class
 import Test exposing (Test, describe, test)
@@ -315,7 +315,7 @@ slowerSecondLap =
 rawLap : String -> Int -> Int -> Int -> RawLap
 rawLap carNumber lapNumber lapTime elapsed =
     { carNumber = carNumber
-    , driverName = "D"
+    , driver = driverNamed "D"
     , lapNumber = lapNumber
     , position = 0
     , lapTime = lapTime
@@ -348,7 +348,7 @@ placeholderCar : String -> Car
 placeholderCar carNumber =
     { metadata =
         { carNumber = carNumber
-        , drivers = [ Driver.fromName "D" ]
+        , drivers = [ driverNamed "D" ]
         , class = Class.none
         , group = ""
         , team = ""

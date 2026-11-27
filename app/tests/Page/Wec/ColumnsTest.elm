@@ -6,7 +6,7 @@ import Expect
 import Internal.ChangePoints as ChangePoints
 import List.Extra
 import Motorsport.BestTimes as BestTimes
-import Motorsport.Driver as Driver
+import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
@@ -14,9 +14,11 @@ import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race as Race
 import Motorsport.Race.Car as Car
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
+import Motorsport.Sector as Sector
 import Motorsport.Wec.Class as Class exposing (Class)
 import Motorsport.Wec.Era as Era
 import Page.Wec.Columns as Columns exposing (Msg(..), Placement(..), StripKey(..))
+import PersonName.Parse exposing (fromUppercasedSurname)
 import Test exposing (Test, describe, test)
 
 
@@ -315,7 +317,7 @@ lapOf : String -> Int -> Duration -> Lap
 lapOf carNumber lapNumber elapsed =
     { emptyLap
         | carNumber = carNumber
-        , driver = Driver.fromName ("Driver " ++ carNumber)
+        , driver = driverNamed ("Driver " ++ carNumber)
         , lap = lapNumber
         , position = Just lapNumber
         , time = Just 5000
@@ -325,7 +327,30 @@ lapOf carNumber lapNumber elapsed =
 
 emptyLap : Lap
 emptyLap =
-    Lap.empty
+    { carNumber = ""
+    , driver = driverNamed "Test Driver"
+    , lap = 0
+    , position = Nothing
+    , time = Nothing
+    , sectors = Sector.initialize (always { time = Nothing, personalBest = Nothing })
+    , best = Nothing
+    , elapsed = Instant.raceStart
+    , crossing = Lap.NoCrossing
+    , flag = Lap.Green
+    , miniSectors = Nothing
+    }
+
+
+{-| A driver named the way the source data spells a name. Fails the test when the string has no surname in it.
+-}
+driverNamed : String -> Driver
+driverNamed fullName =
+    case fromUppercasedSurname fullName of
+        Just person ->
+            Driver.fromName person
+
+        Nothing ->
+            Debug.todo ("no driver named " ++ fullName)
 
 
 {-| The records a round arrives with, which nothing here reads.
@@ -346,7 +371,7 @@ classOf =
 metadataOf : String -> Class -> Car.Metadata
 metadataOf carNumber class =
     { carNumber = carNumber
-    , drivers = [ Driver.fromName ("Driver " ++ carNumber) ]
+    , drivers = [ driverNamed ("Driver " ++ carNumber) ]
     , class = class
     , group = "H"
     , team = "Team " ++ carNumber

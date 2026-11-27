@@ -4,6 +4,7 @@
     "Motorsport.Circuit.Geodesy",
     "Motorsport.Circuit.Relief",
     "Motorsport.Circuit.Shape",
+    "Decode.Driver",
     "Motorsport.Driver",
     "Motorsport.Duration",
     "Motorsport.Flag",
@@ -19,6 +20,10 @@
     "Motorsport.Status",
     "Motorsport.Wec.Circuit.LeMans",
     "Motorsport.Wec.Class",
-    "Motorsport.Wec.Era"
+    "Motorsport.Wec.Era",
+    "NonEmpty",
+    "PersonName",
+    "PersonName.Format",
+    "PersonName.Parse"
   ]
 }
