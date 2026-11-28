@@ -70,7 +70,7 @@ They are not registered with Claude Code's `Skill` tool: read the file and follo
 
 ## Data hazards
 
-**The served geometry and circuit maps are owned upstream**: `app/static/geometry/*.geojson` and `app/static/circuit-maps/*.json` are not committed — the dev, build, test, VRT and Tauri commands copy them from the pinned `circuit-maps-3d` flake input (`github:y047aka/circuit-maps-3d`) into the working tree. A bump of the pin that moves a geometry moves every tracker VRT baseline with it; the upstream fence is what proves its bytes are reproducible from the kept OpenStreetMap evidence.
+**The served geometry and circuit maps are not committed**: `app/static/geometry/*.geojson` and `app/static/circuit-maps/*.json` are copied into the working tree by the commands that read them, from the pinned `circuit-maps-3d` input. A bump of the pin that moves a geometry moves every tracker VRT baseline with it.
 
 **A checkout holds the CSV, the calendar and two rounds' files**: 2025's Le Mans and Circuit of the Americas, so the VRT and a dev server work with nothing run first.
 Every other round's files are ignored rather than committed; `.#tauri-build` is the one command that writes them all.
@@ -79,11 +79,6 @@ A kept file is an export like any other, so a summary that grows a key the drawi
 
 **The timeline is rows too**: the load counts it off the laps into `timeline_events`, so a lap corrected in SQL reaches the summary and the laps on the next export and the timeline not at all — and the next load rebuilds every table off the CSV and takes the correction with it.
 Correct `timeline_events` beside `laps`.
-
-`.#cli-run` converts every round `Motorsport.Calendar` lists and fails any whose CSV is missing; app-side, `Data.Wec.Calendar` is the only source of which rounds exist and where their files are.
-The Vite dev server forwards `/api` to port 8080 and answers it from `static/` when nothing is listening.
-
-`static/car-images.json` is read by no compiler: a mistake shows as a car drawn without a photograph, not as a build that fails.
 
 ## Architecture
 
@@ -179,7 +174,7 @@ A line a change adds to this file must name no closer owner: what one module, RE
 
 ## Testing hazards
 
-- **Elm** — the flake's `generateElm` runs `app/codegen/TestFixtures.elm` on the `circuit-maps-3d` input's own files, writing them out as ignored Elm modules under `TestHelpers/Survey/` and `TestHelpers/Map/`; the tests read the pinned bytes and not the `app/static/` copies beside them. A bare `elm-test` without those modules fails to compile by name, as does any bare `elm make` without `app/generated/`.
+- **Elm** — the flake's `generateElm` runs `app/codegen/TestFixtures.elm` on the `circuit-maps-3d` input's own files, writing them out as ignored Elm modules under `TestHelpers/Survey/` and `TestHelpers/Map/`. A bare `elm-test` without those modules fails to compile by name, as does any bare `elm make` without `app/generated/`.
   `elm-explorations/test` sits in the app's `dependencies` on purpose: hand-written `test-dependencies` read fine to elm-test but make every `elm make` fail with "dependencies edited by hand".
 - **TypeScript** — `/app/tests/` is outside the TS project on purpose: Playwright comes from the flake, so `@playwright/test` does not resolve for `tsc`.
 - **The Elm/element contract** (`app/tests/custom-elements.spec.ts`) reads the values Elm can send out of the wrapper sources, so a constructor without a matching variant in the vendored component fails there instead of shipping unstyled.
