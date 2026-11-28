@@ -1,33 +1,33 @@
-module View.EventsColumn exposing (Model, init, view)
+module View.EventsColumn exposing (Model, Surface, init, surfaceOf, view)
 
 {-| The round's events as a column of the strip: what has happened by the race
 clock, newest first, one post per event.
 
-The feed -- the frame, the posts, their paging -- is `View.Feed`. What is here is the
-reading of a race's timeline into it: which events become posts, and what each of
-them is called.
+The feed -- the frame, the posts, their paging -- is `View.Feed`. The posts arrive as an A2UI surface: `View.EventsColumn.Agent` says the race's timeline in its messages, `View.EventsColumn.Catalog` reads them back, and what is here draws what the catalog read.
 
 The visual tests locate the column by `data-events-column`.
 
 -}
 
+import A2ui
+import Array
 import Dict exposing (Dict)
 import Html exposing (Html, div, span, text)
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Lazy
-import Motorsport.Driver as Driver
+import Json.Decode as Decode
+import Json.Encode as Encode
 import Motorsport.Duration as Duration
-import Motorsport.Flag as Flag exposing (Flag(..))
+import Motorsport.Flag exposing (Flag(..))
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap.Performance as Performance
 import Motorsport.Lap.SegmentStrip as SegmentStrip
-import Motorsport.MiniSector as MiniSector
 import Motorsport.Race.Car exposing (Car)
-import Motorsport.Race.Timeline as Timeline exposing (Timeline)
-import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
-import Motorsport.Sector as Sector exposing (Sector)
+import Motorsport.Race.Timeline exposing (Timeline)
 import View.CarNumberBadge as CarNumberBadge
 import View.ClassMark as ClassMark
+import View.EventsColumn.Agent as Agent
+import View.EventsColumn.Catalog as Catalog
 import View.Feed as Feed
 
 
@@ -38,6 +38,28 @@ type alias Model =
 init : Model
 init =
     Feed.init { perPage = 30 }
+
+
+{-| The surface the column draws, or why it could not be read.
+-}
+type alias Surface =
+    Result String Catalog.Feed
+
+
+{-| The agent's messages, sent over the wire and read back as a renderer would read them: through JSON and the decoder, not handed across as Elm values.
+
+It is built once per round, not per frame: the surface holds the whole race, and the clock is applied to it where it is drawn.
+
+-}
+surfaceOf : List Car -> Timeline -> Surface
+surfaceOf cars timeline =
+    Agent.messages cars timeline
+        |> Encode.list A2ui.encode
+        |> Encode.encode 0
+        |> Decode.decodeString (Decode.list A2ui.decoder)
+        |> Result.mapError Decode.errorToString
+        |> Result.andThen (A2ui.surface Agent.surfaceId)
+        |> Result.andThen Catalog.fromSurface
 
 
 {-| The column, and the corner it is held and closed by.
@@ -52,22 +74,34 @@ view :
     }
     -> Model
     -> List Car
-    -> Timeline
+    -> Surface
     -> Instant
     -> Html msg
-view controls model cars timeline clock =
-    Feed.view
-        { attributes = [ attribute "data-events-column" "" ]
-        , corner = controls.corner
-        , head = text "Race Timeline"
-        , body =
-            Html.Lazy.lazy5 (posts controls.earlier)
-                model
-                cars
-                timeline
-                (Timeline.countUpTo clock timeline)
-                (clockStep clock)
-        }
+view controls model cars surface clock =
+    case surface of
+        Ok feed ->
+            Feed.view
+                { attributes = [ attribute "data-events-column" "" ]
+                , corner = controls.corner
+                , head = text feed.head
+                , body =
+                    Html.Lazy.lazy5 (posts controls.earlier)
+                        model
+                        cars
+                        feed
+                        (Catalog.countUpTo clock feed)
+                        (clockStep clock)
+                }
+
+        Err problem ->
+            Feed.view
+                { attributes = [ attribute "data-events-column" "" ]
+                , corner = controls.corner
+                , head = text "Race Timeline"
+                , body =
+                    div [ Attributes.class "p-5 text-center italic text-muted-foreground" ]
+                        [ text ("The events could not be read: " ++ problem) ]
+                }
 
 
 {-| The race clock, bucketed to the stamp's step. The clock moves every frame; the
@@ -84,102 +118,86 @@ clockStep clock =
     Instant.toDuration clock // Feed.step
 
 
-posts : msg -> Model -> List Car -> Timeline -> Int -> Int -> Html msg
-posts earlier model cars timeline occurred bucket =
-    Feed.posts
-        { earlier = earlier
-        , empty = "Nothing has happened yet"
-        , end = "You have reached the start of the race"
-        }
-        model
-        (feedPosts cars timeline occurred bucket)
-
-
-{-| The posts, newest first, cut where the race clock stands.
-
-The key is the event's place in the timeline, so a post keeps its key however far
-the clock has run.
-
--}
-feedPosts : List Car -> Timeline -> Int -> Int -> List (Feed.Post msg)
-feedPosts cars timeline occurred bucket =
+posts : msg -> Model -> List Car -> Catalog.Feed -> Int -> Int -> Html msg
+posts earlier model cars feed occurred bucket =
     let
         carsByNumber =
             List.foldr (\car -> Dict.insert car.metadata.carNumber car) Dict.empty cars
     in
-    Timeline.toList timeline
-        |> List.take occurred
-        |> List.indexedMap Tuple.pair
-        |> List.reverse
-        |> List.map (\( id, event ) -> post id event (named event carsByNumber) bucket)
+    Feed.posts { earlier = earlier, empty = feed.empty, end = feed.end }
+        model
+        (Array.slice 0 occurred feed.posts
+            |> Array.toList
+            |> List.reverse
+            |> List.map (post carsByNumber bucket)
+        )
 
 
-{-| Which car the event names. The field's own events -- a flag, the start -- name
-none, and are posted by race control.
--}
-named : TimelineEvent -> Dict String Car -> Maybe Car
-named event carsByNumber =
-    case event.eventType of
-        CarEvent carNumber _ ->
-            Dict.get carNumber carsByNumber
-
-        _ ->
-            Nothing
-
-
-post : Int -> TimelineEvent -> Maybe Car -> Int -> Feed.Post msg
-post id event theCar bucket =
-    { key = String.fromInt id
-    , avatar = avatar event theCar
-    , headline = headline theCar
-    , time = Feed.ago { now = bucket * Feed.step, at = Instant.toDuration event.elapsed }
-    , author = author theCar
-    , body = body event theCar
-    , stamp = stamp event
+post : Dict String Car -> Int -> Catalog.Post -> Feed.Post msg
+post carsByNumber bucket p =
+    { key = p.key
+    , avatar = avatar carsByNumber p.avatar
+    , headline = headline carsByNumber p.headline
+    , time = Feed.ago { now = bucket * Feed.step, at = p.elapsed }
+    , author = p.author
+    , body = body p.body
+    , stamp = p.stamp
     }
 
 
-avatar : TimelineEvent -> Maybe Car -> Html msg
-avatar event theCar =
-    case theCar of
-        Just car ->
-            CarNumberBadge.viewAvatar car.metadata
+{-| A car the field has no row for wears race control's plain avatar: the agent names cars, and the field is what says how one looks.
+-}
+avatar : Dict String Car -> Catalog.Avatar -> Html msg
+avatar carsByNumber a =
+    case a of
+        Catalog.CarAvatar carNumber ->
+            case Dict.get carNumber carsByNumber of
+                Just car ->
+                    CarNumberBadge.viewAvatar car.metadata
 
-        Nothing ->
-            CarNumberBadge.circle
-                { ground = "text-[9px] font-bold " ++ flagColor event.eventType
-                , colour = Nothing
-                , label = "RC"
-                , mark = Nothing
-                }
+                Nothing ->
+                    raceControl Nothing
+
+        Catalog.RaceControlAvatar flag ->
+            raceControl flag
+
+
+raceControl : Maybe Flag -> Html msg
+raceControl flag =
+    CarNumberBadge.circle
+        { ground = "text-[9px] font-bold " ++ flagColor flag
+        , colour = Nothing
+        , label = "RC"
+        , mark = Nothing
+        }
 
 
 {-| The colours the app already wears the flags in: `PlaybackControls`'s chips, except green, whose chip is a translucent one.
 -}
-flagColor : EventType -> String
-flagColor eventType =
-    case eventType of
-        Flag FullCourseYellow ->
+flagColor : Maybe Flag -> String
+flagColor flag =
+    case flag of
+        Just FullCourseYellow ->
             "bg-yellow-400 text-yellow-950"
 
-        Flag SafetyCar ->
+        Just SafetyCar ->
             "bg-orange-500 text-orange-950"
 
-        Flag RedFlag ->
+        Just RedFlag ->
             "bg-red-600 text-white"
 
-        Flag GreenFlag ->
+        Just GreenFlag ->
             "bg-green-500 text-green-950"
 
-        _ ->
+        Nothing ->
             "bg-muted text-muted-foreground"
 
 
 {-| The line that leads: the number, and the class it runs in.
 -}
-headline : Maybe Car -> Html msg
-headline theCar =
-    case theCar of
+headline : Dict String Car -> Maybe String -> Html msg
+headline carsByNumber carNumber =
+    case Maybe.andThen (\number -> Dict.get number carsByNumber) carNumber of
         Just { metadata } ->
             div [ Attributes.class "flex items-center gap-x-1.5" ]
                 [ text ("#" ++ metadata.carNumber)
@@ -190,50 +208,16 @@ headline theCar =
             text "Field"
 
 
-author : Maybe Car -> String
-author theCar =
-    Maybe.map (.metadata >> .team) theCar
-        |> Maybe.withDefault "Race Control"
-
-
-{-| What happened. A fastest lap is the class's, whether or not it is also the field's -- which is why the post says `Class Fastest Lap`.
-
-The strip under it is rated against the records as they stood when the lap was set, not as they stand at the clock: a post two hours old would otherwise be recoloured by a sector beaten since.
-
--}
-body : TimelineEvent -> Maybe Car -> Html msg
-body event theCar =
-    case ( event.eventType, theCar ) of
-        -- The one arm that reads the car, for the two names the handover is between.
-        -- With no car row it says the generic line.
-        ( CarEvent _ DriverChange, Just car ) ->
-            TimelineEvent.handover car event
-                |> Maybe.map (\( handedOver, tookOver ) -> Driver.handover handedOver tookOver)
-                |> Maybe.withDefault (TimelineEvent.describe event.eventType)
-                |> text
-
-        ( CarEvent _ FastestLap, _ ) ->
-            fastestLap event
-
-        _ ->
-            text (TimelineEvent.describe event.eventType)
-
-
-{-| The fastest lap: the driver, the time, and the segments it ran. It takes no car --
-everything here is off the event's own `lap`, which the backend attached -- so a lap
-keeps its strip even where the field has no row for the car, and asks the field for
-nothing a second time.
--}
-fastestLap : TimelineEvent -> Html msg
-fastestLap event =
-    case event.lap of
+body : Catalog.Body -> Html msg
+body b =
+    case b.fastestLap of
         Nothing ->
-            text "Class Fastest Lap"
+            text b.text
 
         Just lap ->
             div [ Attributes.class "grid gap-y-1" ]
                 [ span [] <|
-                    [ text ("Class Fastest Lap · " ++ Driver.initialsAndSurname lap.driver) ]
+                    [ text (b.text ++ " · " ++ lap.driver) ]
                         ++ Maybe.withDefault []
                             (Maybe.map
                                 (\t ->
@@ -242,37 +226,12 @@ fastestLap event =
                                         [ text (Duration.toString t) ]
                                     ]
                                 )
-                                lap.lap.time
+                                lap.time
                             )
-                , case lap.miniSectors of
-                    Just miniSectors ->
-                        SegmentStrip.miniSectorsRated
-                            (MiniSector.map rate miniSectors)
+                , case lap.segments of
+                    Catalog.ByMiniSectors miniSectors ->
+                        SegmentStrip.miniSectorsRated miniSectors
 
-                    Nothing ->
-                        SegmentStrip.sectorsRated
-                            { s1 = rate (Sector.get Sector.S1 lap.sectors)
-                            , s2 = rate (Sector.get Sector.S2 lap.sectors)
-                            , s3 = rate (Sector.get Sector.S3 lap.sectors)
-                            }
+                    Catalog.BySectors sectors ->
+                        SegmentStrip.sectorsRated sectors
                 ]
-
-
-{-| `Nothing` where there is no time to rate, which is a segment the lap has none of.
--}
-rate : TimelineEvent.Rated -> Maybe Performance.RatedTime
-rate rated =
-    Performance.rateTime rated.fastest
-        { time = rated.time, personalBest = rated.personalBest }
-
-
-{-| The moment the event fell, and the lap it fell on -- one behind the lap a timing
-sheet has the car on, which is what the event's own line calls it.
--}
-stamp : TimelineEvent -> String
-stamp event =
-    Duration.toStringToSeconds (Instant.toDuration event.elapsed)
-        ++ (event.lapNumber
-                |> Maybe.map (\lap -> " · Lap " ++ String.fromInt lap)
-                |> Maybe.withDefault ""
-           )

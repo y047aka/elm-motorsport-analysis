@@ -337,7 +337,7 @@ mainGrid round keys m =
     div
         [ Attributes.class "row-start-2 h-full min-h-0 relative grid grid-cols-[auto_1fr] gap-2.5 p-[0_10px_10px_10px]" ]
         [ standingsCell "col-start-1 min-h-0 grid relative" keys m round.energy snapshot replay.race.cars
-        , columnStrip "col-start-2" round.track round.timeline keys m round.pitCycles replay snapshot
+        , columnStrip "col-start-2" round.track round.timeline round.eventsSurface keys m round.pitCycles replay snapshot
         , Html.map FloatMsg (Float.view m.float (TrackerChart.circuit round.track) snapshot)
         , standingsPopover
         , div [ attribute "aria-live" "polite", Attributes.class "sr-only" ] [ text m.strip.announcement ]
@@ -439,8 +439,8 @@ stripColumn key width placement content =
     )
 
 
-columnStrip : String -> TrackerChart.Track -> Timeline -> List Columns.StripKey -> Model -> Dict String PitCycle -> Replay.Model -> Snapshot -> Html Msg
-columnStrip cell track timeline keys m pitCycles replay snapshot =
+columnStrip : String -> TrackerChart.Track -> Timeline -> EventsColumn.Surface -> List Columns.StripKey -> Model -> Dict String PitCycle -> Replay.Model -> Snapshot -> Html Msg
+columnStrip cell track timeline eventsSurface keys m pitCycles replay snapshot =
     let
         several =
             List.length keys > 1
@@ -483,7 +483,7 @@ columnStrip cell track timeline keys m pitCycles replay snapshot =
                             }
                             m.eventsColumn
                             replay.race.cars
-                            timeline
+                            eventsSurface
                             (Clock.getElapsed replay.playback)
                 )
     in

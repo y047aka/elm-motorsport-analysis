@@ -48,6 +48,7 @@ import Motorsport.Wec.Circuit.Spa.Layout as SpaLayout
 import Motorsport.Wec.Era as Era
 import Shared.Msg exposing (Drawing, Msg(..))
 import Task exposing (Task)
+import View.EventsColumn as EventsColumn
 
 
 
@@ -159,7 +160,8 @@ nothingYet =
 clock, cached because every view of a frame shares it, and the one of them
 rebuilt as playback runs.
 
-`timeline` is the events themselves, kept for the events column to read the clock against, and the one field a round can go without: nothing playback reads is counted off them.
+`timeline` is the events themselves, and the one field a round can go without: nothing playback reads is counted off them.
+`eventsSurface` is the events column's reading of them, built when they arrive rather than as the clock runs.
 
 -}
 type alias LoadedRound =
@@ -169,6 +171,7 @@ type alias LoadedRound =
     , energy : Energy.Table
     , track : Tracker.Track
     , timeline : Timeline
+    , eventsSurface : EventsColumn.Surface
     }
 
 
@@ -490,7 +493,15 @@ timelineArrived key events round =
 
         Loaded id loaded ->
             if keyOf id == key then
-                Loaded id { loaded | timeline = Timeline.fromList events }
+                let
+                    timeline =
+                        Timeline.fromList events
+                in
+                Loaded id
+                    { loaded
+                        | timeline = timeline
+                        , eventsSurface = EventsColumn.surfaceOf loaded.replay.race.cars timeline
+                    }
 
             else
                 round
@@ -535,13 +546,17 @@ roundFrom summary rawLaps timelineEvents drawing =
 
         energy =
             Energy.tableOf replay.race.cars
+
+        timeline =
+            Timeline.fromList timelineEvents
     in
     { replay = replay
     , snapshot = snapshotOf replay
     , pitCycles = pitCycles
     , energy = energy
     , track = trackOf summary.track drawing
-    , timeline = Timeline.fromList timelineEvents
+    , timeline = timeline
+    , eventsSurface = EventsColumn.surfaceOf replay.race.cars timeline
     }
 
 
