@@ -86,13 +86,48 @@
           done
         '';
 
+        # The package's tests read the same pinned bytes the app serves, and they
+        # read them off the input rather than off `app/static/`: a stale copy in
+        # the working tree is then not what a test passes on.
+        # A directory holding no file is refused here, where the message can name
+        # it, rather than by a generator left with nothing to write.
+        # elm-codegen 0.6 writes a long string as a block string without looking at
+        # its content, so a file holding `"""` comes out as a module that does not
+        # compile.
+        servedFiles = dir: extension:
+          let
+            names =
+              builtins.filter
+                (name: builtins.match ".*\\.${extension}" name != null)
+                (builtins.attrNames (builtins.readDir dir));
+
+            bytesOf = name:
+              let
+                content = builtins.readFile (dir + "/${name}");
+              in
+              if builtins.replaceStrings [ "\"\"\"" ] [ "quoted" ] content != content then
+                builtins.throw "${dir}/${name} holds \"\"\", which no block string can hold"
+              else
+                content;
+          in
+          if names == [ ] then
+            builtins.throw "${dir} holds no .${extension} file"
+          else
+            builtins.listToAttrs (map (name: { name = name; value = bytesOf name; }) names);
+
+        testFixtureFlags =
+          builtins.toFile "test-fixtures.json" (builtins.toJSON {
+            geometry = servedFiles (circuitData + "/geometry") "geojson";
+            maps = servedFiles (circuitData + "/specs") "json";
+          });
+
         # `app/codegen`'s output — `app/generated/`, and the package's `TestHelpers/Survey/` and `TestHelpers/Map/` — is not committed, so every command that compiles the app or its tests writes it first; elm-codegen comes from `app/node_modules`.
         # elm-codegen 0.6 exits 0 when the generator itself does not compile, so the old output is removed first: a broken generator then fails the app's compile by module name instead of leaving last run's table in place.
-        # The fixture step reads `app/static/`, so a caller runs `syncCircuitData` before this, and its modules are removed with `app/generated/` so a circuit dropped upstream leaves none behind.
+        # Both generators read the pinned input, so no caller runs `syncCircuitData` for them, and the helper modules are removed with `app/generated/` so a circuit dropped upstream leaves none behind.
         generateElm = ''
           rm -rf app/generated package/tests/Motorsport/TestHelpers/Survey package/tests/Motorsport/TestHelpers/Map
           (cd app && pnpm exec elm-codegen run --flags-from ../data/wec/manufacturers.json --output generated)
-          node app/codegen/test-fixtures.mjs
+          (cd app && pnpm exec elm-codegen run codegen/TestFixtures.elm --flags-from ${testFixtureFlags} --output ../package/tests)
         '';
 
         # Where the CLI and the server compute when the caller names nowhere
@@ -235,7 +270,7 @@
           update-snapshots-ci  = { type = "app"; program = "${vrt.updateSnapshotsCiApp}/bin/update-snapshots-ci";                                                             meta.description = "Re-render the VRT baselines on CI's Linux and push them onto this branch"; };
           benchmark            = { type = "app"; program = "${mkNodeApp "benchmark"            "cd package/benchmark && node generate-position-fixture.mjs && node generate-fixture.mjs && elm reactor"}/bin/benchmark"; meta.description = "Serve the package benchmarks (elm reactor)"; };
           typecheck            = { type = "app"; program = "${mkNodeApp "typecheck"            "cd app && pnpm run typecheck"}/bin/typecheck";                                            meta.description = "Type-check the app's TypeScript (tsc --noEmit)"; };
-          review-app           = { type = "app"; program = "${mkNodeApp "review-app"           "${syncCircuitData}\n${generateElm}\ncd app && elm-review src"}/bin/review-app";                          meta.description = "Run elm-review on app"; };
+          review-app           = { type = "app"; program = "${mkNodeApp "review-app"           "${generateElm}\ncd app && elm-review src"}/bin/review-app";                          meta.description = "Run elm-review on app"; };
           review-package       = { type = "app"; program = "${mkNodeApp "review-package"       "cd package && elm-review src"}/bin/review-package";                  meta.description = "Run elm-review on package"; };
           format               = { type = "app"; program = "${mkNodeApp "format"               "elm-format --yes app/src package/src"}/bin/format";                   meta.description = "Format Elm code (elm-format)"; };
           car-images           = { type = "app"; program = "${carImagesApp}/bin/car-images";                                                                            meta.description = "Download a season's car photographs and register them"; };
