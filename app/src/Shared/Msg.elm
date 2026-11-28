@@ -1,19 +1,18 @@
-module Shared.Msg exposing (Msg(..), Drawing)
+module Shared.Msg exposing (Msg(..))
 
 {-| The Shared messages are defined in their own module so that `Effect` can
 refer to them without creating an import cycle with `Shared`.
 
-@docs Msg, Drawing
+@docs Msg
 
 -}
 
 import Data.Wec as Wec
 import Data.Wec.Calendar as Calendar
 import Data.Wec.CarImage exposing (CarImages)
+import Data.Wec.Circuits exposing (Drawing)
 import Data.Wec.Laps as WecLaps
 import Http
-import Motorsport.Circuit.Direction exposing (Direction)
-import Motorsport.Circuit.Layout exposing (Layout)
 import Motorsport.Race.TimelineEvent exposing (TimelineEvent)
 import Motorsport.Replay as Replay
 
@@ -34,9 +33,3 @@ type Msg
     | TimelineLoaded_Wec { season : Int, id : String } (Result Http.Error (List TimelineEvent))
     | DrawingLoaded { season : Int, id : String } String (Result Http.Error Drawing)
     | ReplayMsg Replay.Msg
-
-
-type alias Drawing =
-    { layout : Layout
-    , direction : Direction
-    }

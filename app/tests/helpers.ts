@@ -24,13 +24,14 @@ export function readConstant(name: string, source: string, pattern: RegExp): num
 }
 
 /**
- * Which circuits `Shared` draws to their own shape: the words it matches in `drawingFor`,
- * which are the words it asks `/static/circuit-maps/<word>.json` and
+ * Which circuits the app draws to their own shape: the words `Data.Wec.Circuits`
+ * matches in `drawingFor`, which are the words it asks
+ * `/static/circuit-maps/<word>.json` and
  * `/static/geometry/<word>.geojson` for and the words Flix's `Circuit.jsonValue` sends.
  */
 export function drawnNames(): string[] {
-  const body = readSource('app/src/Shared.elm').split('drawingFor circuit =')[1];
-  if (!body) throw new Error('drawingFor not found in Shared.elm');
+  const body = readSource('app/src/Data/Wec/Circuits.elm').split('drawingFor circuit =')[1];
+  if (!body) throw new Error('drawingFor not found in Data/Wec/Circuits.elm');
   return [...body.split('\n\n\n')[0].matchAll(/"([a-z_]+)" ->/g)].map((m) => m[1]);
 }
 

@@ -5,7 +5,7 @@ import { drawnNames, readSource } from './helpers';
 /**
  * The circuit seam: the served bytes stand where the app reaches for them.
  *
- * A drawn circuit is a list in `Shared` — the words `drawingFor` matches — a
+ * A drawn circuit is a list in `Data.Wec.Circuits` — the words `drawingFor` matches — a
  * second list in Flix — the words `Circuit.jsonValue` can send in a summary — and
  * two files behind them, the map record at `app/static/circuit-maps/<word>.json`
  * and the geometry at `app/static/geometry/<word>.geojson`, both copied from the
@@ -34,7 +34,7 @@ function served(word: string): Features {
   return JSON.parse(readSource(`app/static/geometry/${word}.geojson`));
 }
 
-test('every circuit Shared draws has its geometry where the app reaches for it', () => {
+test('every circuit the app draws has its geometry where the app reaches for it', () => {
   for (const name of drawnNames()) {
     const outline = outlineOf(served(name));
     expect(outline, `${name}: the served file holds no outline`).toBeTruthy();
@@ -45,7 +45,7 @@ test('every circuit Shared draws has its geometry where the app reaches for it',
   }
 });
 
-test('every circuit Shared draws has its map record where the app reaches for it', () => {
+test('every circuit the app draws has its map record where the app reaches for it', () => {
   for (const name of drawnNames()) {
     const record = JSON.parse(readSource(`app/static/circuit-maps/${name}.json`));
     expect(
@@ -66,12 +66,12 @@ function sentNames(): string[] {
   return names;
 }
 
-test('every circuit Shared draws is one Flix can name', () => {
+test('every circuit the app draws is one Flix can name', () => {
   const sent = sentNames();
   const drawn = drawnNames();
-  expect(drawn.length, 'Shared.drawingFor matches no circuit name').toBeGreaterThan(0);
+  expect(drawn.length, 'drawingFor matches no circuit name').toBeGreaterThan(0);
   for (const name of drawn) {
-    expect(sent, `Shared.elm draws "${name}", a circuit no summary can name`).toContain(name);
+    expect(sent, `the app draws "${name}", a circuit no summary can name`).toContain(name);
   }
 });
 

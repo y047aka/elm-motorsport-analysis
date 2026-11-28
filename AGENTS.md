@@ -124,7 +124,7 @@ Nothing in a `Race` moves; a clock is applied to it to get what is true then.
 
 ### The tracker
 
-`Shared` picks a round's drawing by the circuit its summary names (`track.circuit`), not by the round id; a circuit with no geometry draws as the ring.
+`Data.Wec.Circuits` picks a round's drawing by the circuit its summary names (`track.circuit`), not by the round id; a circuit with no geometry draws as the ring.
 
 Where the timing lines stand is the served circuit map's (`static/circuit-maps/<word>.json`); how a car is placed between them is decided here.
 A line the map gives no distance for is placed by the time between the lines either side of it (`Tracker.LapScale.lapScale`).
