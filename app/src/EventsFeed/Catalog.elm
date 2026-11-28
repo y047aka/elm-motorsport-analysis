@@ -1,5 +1,5 @@
 module EventsFeed.Catalog exposing
-    ( catalogId
+    ( catalogId, flagName, ratingName
     , Feed, Post, Avatar(..), Body, FastestLap, Segments(..), Rating
     , fromSurface, countUpTo
     )
@@ -18,7 +18,7 @@ A car is named by its number and nothing more: its colours, class and team are t
 
 The posts are revealed by the race clock against their `elapsed`, so a surface whose posts are out of that order is refused rather than revealed out of turn.
 
-@docs catalogId
+@docs catalogId, flagName, ratingName
 @docs Feed, Post, Avatar, Body, FastestLap, Segments, Rating
 @docs fromSurface, countUpTo
 
@@ -29,7 +29,7 @@ import Array exposing (Array)
 import Dict
 import Json.Decode as Decode exposing (Decoder)
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Flag as Flag exposing (Flag)
+import Motorsport.Flag as Flag exposing (Flag(..))
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap.Performance as Performance exposing (PerformanceLevel(..))
 import Motorsport.MiniSector exposing (MiniSectors)
@@ -40,6 +40,39 @@ import Motorsport.Sector as Sector exposing (BySector)
 catalogId : String
 catalogId =
     "urn:elm-motorsport-analysis:a2ui:catalog:events-feed:1"
+
+
+{-| A flag as `Avatar.flag` spells it: the timeline file's spelling, which `Flag.fromString` reads back.
+-}
+flagName : Flag -> String
+flagName flag =
+    case flag of
+        FullCourseYellow ->
+            "fullCourseYellow"
+
+        SafetyCar ->
+            "safetyCar"
+
+        RedFlag ->
+            "redFlag"
+
+        GreenFlag ->
+            "greenFlag"
+
+
+{-| A segment's rating as `EventBody.fastestLap` spells it.
+-}
+ratingName : PerformanceLevel -> String
+ratingName level =
+    case level of
+        Fastest ->
+            "fastest"
+
+        PersonalBest ->
+            "personalBest"
+
+        Standard ->
+            "standard"
 
 
 type alias Feed =
@@ -246,19 +279,13 @@ levelDecoder : Decoder PerformanceLevel
 levelDecoder =
     Decode.string
         |> Decode.andThen
-            (\level ->
-                case level of
-                    "fastest" ->
-                        Decode.succeed Fastest
+            (\name ->
+                case List.filter (\level -> ratingName level == name) [ Fastest, PersonalBest, Standard ] of
+                    level :: _ ->
+                        Decode.succeed level
 
-                    "personalBest" ->
-                        Decode.succeed PersonalBest
-
-                    "standard" ->
-                        Decode.succeed Standard
-
-                    _ ->
-                        Decode.fail ("no rating " ++ level)
+                    [] ->
+                        Decode.fail ("no rating " ++ name)
             )
 
 

@@ -16,9 +16,8 @@ import Dict exposing (Dict)
 import EventsFeed.Catalog as Catalog
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration
-import Motorsport.Flag exposing (Flag(..))
 import Motorsport.Instant as Instant
-import Motorsport.Lap.Performance as Performance exposing (PerformanceLevel(..))
+import Motorsport.Lap.Performance as Performance
 import Motorsport.MiniSector as MiniSector
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
@@ -115,28 +114,13 @@ post id event theCar =
         )
 
 
-{-| The flag race control's avatar wears, spelled as a timeline file spells it. Every other post's avatar wears none.
+{-| The flag race control's avatar wears. Every other post's avatar wears none.
 -}
 flagOf : EventType -> Maybe Value
 flagOf eventType =
     case eventType of
         Flag flag ->
-            Just
-                (JString
-                    (case flag of
-                        FullCourseYellow ->
-                            "fullCourseYellow"
-
-                        SafetyCar ->
-                            "safetyCar"
-
-                        RedFlag ->
-                            "redFlag"
-
-                        GreenFlag ->
-                            "greenFlag"
-                    )
-                )
+            Just (JString (Catalog.flagName flag))
 
         _ ->
             Nothing
@@ -203,24 +187,11 @@ segments cells =
                 object
                     (( "name", JString name )
                         :: present "time" (Maybe.map (.time >> int) rating)
-                        ++ present "rating" (Maybe.map (.performance >> level >> JString) rating)
+                        ++ present "rating" (Maybe.map (.performance >> Catalog.ratingName >> JString) rating)
                     )
             )
         |> Array.fromList
         |> JArray
-
-
-level : PerformanceLevel -> String
-level performance =
-    case performance of
-        Fastest ->
-            "fastest"
-
-        PersonalBest ->
-            "personalBest"
-
-        Standard ->
-            "standard"
 
 
 {-| The moment the event fell, and the lap it fell on -- one behind the lap a timing sheet has the car on, which is what the event's own line calls it.

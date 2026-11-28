@@ -6,12 +6,18 @@ import Dict
 import EventsFeed
 import EventsFeed.Catalog as Catalog exposing (Avatar(..), Segments(..))
 import Expect
-import Motorsport.Flag exposing (Flag(..))
+import Motorsport.Class as Class
+import Motorsport.Driver as Driver exposing (Driver)
+import Motorsport.Flag as Flag exposing (Flag(..))
 import Motorsport.Instant as Instant
+import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance exposing (PerformanceLevel(..))
+import Motorsport.Manufacturer as Manufacturer
+import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent
 import Motorsport.Sector as Sector
+import PersonName.Parse exposing (fromUppercasedSurname)
 import Test exposing (Test, describe, test)
 
 
@@ -34,6 +40,8 @@ suite : Test
 suite =
     describe "EventsFeed"
         [ surface
+        , withTheCar
+        , spellings
         , refusals
         ]
 
@@ -102,6 +110,113 @@ surface =
                         )
                     |> Expect.equal (Ok [ 1, 1, 2, 3, 4 ])
         ]
+
+
+driverNamed : String -> Driver
+driverNamed name =
+    case fromUppercasedSurname name of
+        Just person ->
+            Driver.fromName person
+
+        Nothing ->
+            Debug.todo ("no driver named " ++ name)
+
+
+lapOf : Int -> Driver -> Int -> Lap
+lapOf lapNumber driver elapsed =
+    { carNumber = "7"
+    , driver = driver
+    , lap = lapNumber
+    , position = Nothing
+    , time = Nothing
+    , sectors = Sector.initialize (always { time = Nothing, personalBest = Nothing })
+    , best = Nothing
+    , elapsed = Instant.fromDuration elapsed
+    , crossing = Lap.NoCrossing
+    , flag = Lap.Green
+    , miniSectors = Nothing
+    }
+
+
+{-| Car 7, handed from one driver to the other between its first lap and its second.
+-}
+car7 : Car
+car7 =
+    { metadata =
+        { carNumber = "7"
+        , drivers = []
+        , class = Class.none
+        , group = "H"
+        , team = "Toyota Racing"
+        , manufacturer = Manufacturer.unknown
+        , imageUrl = Nothing
+        }
+    , startPosition = 1
+    , laps = [ lapOf 1 (driverNamed "Kamui KOBAYASHI") 60000, lapOf 2 (driverNamed "Mike CONWAY") 120000 ]
+    }
+
+
+{-| Car 7's driver change, and a fastest lap of its whose second sector is the car's own best and not the field's.
+-}
+car7Timeline : Timeline
+car7Timeline =
+    [ """{ "elapsed": "1:30.000", "event": "driverChange", "carNumber": "7", "lap": 1 }"""
+    , """{ "elapsed": "2:00.000", "event": "fastestLap", "carNumber": "7", "lap": 2, "driver": "Mike CONWAY", "performance": { "lap": { "time": "2:00.000", "fastest": "2:00.000", "personalBest": "2:00.000" }, "sectors": { "s1": { "time": "40.000", "fastest": "40.000", "personalBest": "40.000" }, "s2": { "time": "40.000", "fastest": "39.000", "personalBest": "40.000" }, "s3": { "time": "40.000", "fastest": "39.000", "personalBest": "39.500" } } } }"""
+    ]
+        |> String.join "\n"
+        |> TimelineEvent.fromJsonl
+        |> Result.withDefault []
+        |> Timeline.fromList
+
+
+withTheCar : Test
+withTheCar =
+    let
+        feed =
+            EventsFeed.surfaceOf [ car7 ] car7Timeline
+
+        first =
+            feed |> Result.map (.posts >> Array.get 0)
+    in
+    describe "a car the field has a row for"
+        [ test "is named by its number, and posted by its team" <|
+            \_ ->
+                first
+                    |> Result.map (Maybe.map (\p -> ( p.avatar, p.headline, p.author )))
+                    |> Expect.equal (Ok (Just ( CarAvatar "7", Just "7", "Toyota Racing" )))
+        , test "a driver change names the two drivers off the car's laps" <|
+            \_ ->
+                first
+                    |> Result.map (Maybe.map (.body >> .text))
+                    |> Expect.equal (Ok (Just "K.KOBAYASHI → M.CONWAY"))
+        , test "a segment that is the car's own best and not the field's reads as a personal best" <|
+            \_ ->
+                feed
+                    |> Result.map
+                        (.posts
+                            >> Array.get 1
+                            >> Maybe.andThen (.body >> .fastestLap)
+                            >> Maybe.map
+                                (\lap ->
+                                    case lap.segments of
+                                        BySectors sectors ->
+                                            List.map (Maybe.map .performance) (Sector.values sectors)
+
+                                        ByMiniSectors _ ->
+                                            []
+                                )
+                        )
+                    |> Expect.equal (Ok (Just [ Just Fastest, Just PersonalBest, Just Standard ]))
+        ]
+
+
+spellings : Test
+spellings =
+    test "every flag the catalog spells, the timeline file's reading takes back" <|
+        \_ ->
+            [ FullCourseYellow, SafetyCar, RedFlag, GreenFlag ]
+                |> List.map (Catalog.flagName >> Flag.fromString)
+                |> Expect.equal (List.map Just [ FullCourseYellow, SafetyCar, RedFlag, GreenFlag ])
 
 
 {-| A hand-built surface of two posts at `first` and `second` race milliseconds.
