@@ -1,16 +1,18 @@
 module Legacy.WecLaps exposing (RawLap, assignPositions, attach, fromJsonl)
 
-{-| `Data.Wec.Laps` as it stood before the round's laps carried a position.
-`PositionBenchmark` is the only reader.
+{-| `Data.Wec.Laps` without the position the file carries. `PositionBenchmark` is
+the only reader.
 
-The decoder here has no `position` field and `attach` leaves every lap's
-`Nothing`, which `assignPositions` then fills -- the work that is now a window
-function over `laps`.
+Everything else is that module's: the same fields read, the same laps built, the
+same bests accumulated. `attach` leaves every lap's position `Nothing`, which
+[`assignPositions`](#assignPositions) then counts out of the laps -- the work the
+exporter's `position` key took into SQL.
 
 -}
 
 import Decode.Driver as Driver
 import Dict exposing (Dict)
+import Internal.Jsonl as Jsonl
 import Json.Decode as Decode exposing (Decoder, int, string)
 import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (optional, required)
@@ -19,7 +21,7 @@ import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
-import Motorsport.MiniSector as MiniSector exposing (Named)
+import Motorsport.MiniSector as MiniSector exposing (MiniSectors)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Sector as Sector exposing (BySector)
 
@@ -32,7 +34,9 @@ type alias RawLap =
     , sectors : BySector (Maybe Duration)
     , miniSectors : Maybe (Dict String RawMiniSector)
     , elapsed : Instant
+    , crossingFinishLineInPit : Bool
     , pitTime : Maybe Duration
+    , flagAtFl : Lap.Flag
     }
 
 
@@ -53,25 +57,8 @@ type alias RawMiniSector =
 {-| Reads the laps file, which holds one lap per line rather than one array.
 -}
 fromJsonl : String -> Result String (List RawLap)
-fromJsonl body =
-    body
-        |> String.lines
-        |> List.indexedMap Tuple.pair
-        |> List.foldr decodeLine (Ok [])
-
-
-decodeLine : ( Int, String ) -> Result String (List RawLap) -> Result String (List RawLap)
-decodeLine ( index, line ) rest =
-    if String.isEmpty line then
-        rest
-
-    else
-        case Decode.decodeString rawLapDecoder line of
-            Ok rawLap ->
-                Result.map ((::) rawLap) rest
-
-            Err error ->
-                Err ("line " ++ String.fromInt (index + 1) ++ ": " ++ Decode.errorToString error)
+fromJsonl =
+    Jsonl.decode rawLapDecoder
 
 
 rawLapDecoder : Decoder RawLap
@@ -84,7 +71,49 @@ rawLapDecoder =
         |> required "sectors" sectorsDecoder
         |> optional "miniSectors" (Decode.map Just miniSectorsDecoder) Nothing
         |> required "elapsed" Instant.decoder
+        |> required "crossingFinishLineInPit" flagDecoder
         |> required "pitTime" optionalDurationDecoder
+        |> required "flagAtFl" flagAtFlDecoder
+
+
+{-| `crossingFinishLineInPit` is `B` where the lap finished in the pit lane and
+blank where it did not; no other value appears in a round.
+-}
+flagDecoder : Decoder Bool
+flagDecoder =
+    Decode.map (String.isEmpty >> not) string
+
+
+{-| Which flag was out as the lap crossed the line.
+
+The five codes are all the loader will have put in the database at all, so a
+sixth is a truncated or hand-edited file.
+
+-}
+flagAtFlDecoder : Decoder Lap.Flag
+flagAtFlDecoder =
+    Decode.string
+        |> Decode.andThen
+            (\code ->
+                case code of
+                    "GF" ->
+                        Decode.succeed Lap.Green
+
+                    "FCY" ->
+                        Decode.succeed Lap.FullCourseYellow
+
+                    "SF" ->
+                        Decode.succeed Lap.SlowZone
+
+                    "FF" ->
+                        Decode.succeed Lap.Finish
+
+                    "RF" ->
+                        Decode.succeed Lap.Red
+
+                    _ ->
+                        Decode.fail ("unknown flag at the finish line: " ++ code)
+            )
 
 
 sectorsDecoder : Decoder (BySector (Maybe Duration))
@@ -143,11 +172,11 @@ optionalDurationDecoder =
 -- ATTACH
 
 
-{-| Attach raw laps to cars.
+{-| Attach raw laps to cars, and count a position onto every one of them.
 
-Per car: groups raws by `carNumber`, sorts by `lapNumber`, and accumulates
-best lap / sector times. Then assigns 0-based per-lap positions across all
-cars by sorting `elapsed` ascending for each lap number.
+Per car: groups raws by `carNumber`, sorts by `lapNumber`, and accumulates best
+lap / sector times. Then assigns 0-based per-lap positions across all cars by
+sorting `elapsed` ascending for each lap number.
 
 -}
 attach : List String -> List RawLap -> List Car -> List Car
@@ -200,7 +229,7 @@ finalizeCarLaps miniSectorNames raws =
 type alias Bests =
     { lap : Maybe Duration
     , sectors : BySector (Maybe Duration)
-    , miniSectors : Named (Maybe Duration)
+    , miniSectors : MiniSectors (Maybe Duration)
     }
 
 
@@ -255,10 +284,6 @@ accumulate miniSectorNames raw ( bests, acc ) =
             , driver = raw.driver
             , lap = raw.lapNumber
             , position = Nothing
-
-            -- The zero stops here: the CLI writes an unrecorded lap time out as
-            -- `0.000` either way, where a blank sector cell stays blank and has
-            -- already arrived as `Nothing`.
             , time = lapTime
             , best = newBests.lap
             , sectors =
@@ -267,11 +292,8 @@ accumulate miniSectorNames raw ( bests, acc ) =
                     raw.sectors
                     newBests.sectors
             , elapsed = raw.elapsed
-            , crossing =
-                -- The decoder this was frozen from never read the lap that
-                -- ended in the pit lane, so an in lap reads here as a lap the
-                -- car drove.
-                raw.pitTime |> Maybe.map Lap.ExitAtStart |> Maybe.withDefault Lap.NoCrossing
+            , crossing = crossingOf raw
+            , flag = raw.flagAtFl
             , miniSectors =
                 miniSectors
                     |> Maybe.map
@@ -294,7 +316,7 @@ accumulate miniSectorNames raw ( bests, acc ) =
 {-| The lap's mini-sectors in track order, under the names the round's shares
 spell them with.
 -}
-byTrackOrder : List String -> Dict String RawMiniSector -> Named RawMiniSector
+byTrackOrder : List String -> Dict String RawMiniSector -> MiniSectors RawMiniSector
 byTrackOrder names byName =
     List.map
         (\name ->
@@ -305,6 +327,22 @@ byTrackOrder names byName =
             }
         )
         names
+
+
+crossingOf : RawLap -> Lap.Crossing
+crossingOf raw =
+    case ( raw.crossingFinishLineInPit, raw.pitTime ) of
+        ( False, Nothing ) ->
+            Lap.NoCrossing
+
+        ( True, Nothing ) ->
+            Lap.EntryAtEnd
+
+        ( False, Just stop ) ->
+            Lap.ExitAtStart stop
+
+        ( True, Just stop ) ->
+            Lap.ExitAndEntry stop
 
 
 

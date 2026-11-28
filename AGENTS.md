@@ -28,6 +28,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#update-snapshots-vrt` | Update VRT snapshots (macOS renderings; CI will reject them) |
 | `nix run .#update-snapshots-ci` | Re-render the VRT baselines on CI and pull them onto this branch |
 | `nix run .#benchmark` | Serve `/package/benchmark` (elm reactor) |
+| `nix run .#benchmark-check` | Compile the package benchmarks |
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
 | `nix run .#car-images` | Download a season's car photographs and register them |
@@ -47,6 +48,7 @@ Prefer these over invoking `pnpm` / `cargo` / `flix` directly — the flake pins
 | Changed | Run | CI gates it |
 | --- | --- | --- |
 | Elm under `app/` or `package/` | `.#format`, `.#test`, `.#review-app` / `.#review-package` | `.#test` only |
+| `package/benchmark` or `package/fixture` | `.#benchmark-check` | no |
 | TypeScript under `app/` | `.#typecheck` | yes |
 | `backend/` | `.#flix-test` (`backend/README.md`) | yes |
 | `backend/sqlitefx/` | `.#sqlitefx-test`, and `.#flix-test` for the files `backend/src/Sqlitefx/` links | yes |

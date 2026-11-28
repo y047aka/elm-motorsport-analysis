@@ -22,12 +22,10 @@ import Benchmark exposing (Benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
 import Data.Wec as Wec
 import Data.Wec.Laps as Laps
-import Dict
+import Fixture.Json as FixtureJson
 import Fixture.Positions as Fixture
-import Json.Decode as Decode
 import Legacy.WecLaps as Legacy
 import Motorsport.Race.Car as Car exposing (Car)
-import Motorsport.Wec.Era as Era
 
 
 main : BenchmarkProgram
@@ -73,24 +71,23 @@ attachedTo bound =
     Laps.attach miniSectorNames (currentLaps |> List.filter (\lap -> lap.lapNumber <= bound)) grid
 
 
-{-| The track order the fixture's round names its mini-sectors in.
+{-| The summary, read once: the grid both sides attach laps to, and the track
+order the round names its mini-sectors in. What is measured is the laps, and the
+summary is the same either way.
 -}
-miniSectorNames : List String
-miniSectorNames =
-    [ "SCL2", "Z4", "IP1", "Z12", "SCLC", "A7-1", "IP2", "A8-1", "SCLB", "PORIN", "POROUT", "PITREF", "SCL1", "FORDOUT", "FL" ]
+summary : Wec.Event
+summary =
+    FixtureJson.event Fixture.rawSummary
 
 
-{-| The starting grid both sides attach laps to, decoded once: what is being
-measured is the laps, and the summary is the same either way.
--}
 grid : List Car
 grid =
-    case Decode.decodeString (Wec.eventDecoder Era.Gt3AsThirdClass Dict.empty) Fixture.rawSummary of
-        Ok event ->
-            event.startingGrid.entries |> List.map Car.fromStartingGrid
+    summary.startingGrid.entries |> List.map Car.fromStartingGrid
 
-        Err _ ->
-            []
+
+miniSectorNames : List String
+miniSectorNames =
+    FixtureJson.miniSectorNames summary
 
 
 legacyLaps : List Legacy.RawLap

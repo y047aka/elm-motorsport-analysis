@@ -181,6 +181,11 @@
         vrtTestCmd = "${syncCircuitData}\n${generateElm}\ncd app && playwright test \"$@\"";
         vrtUpdateCmd = "${syncCircuitData}\n${generateElm}\ncd app && playwright test --update-snapshots \"$@\"";
 
+        # `.#test` compiles the app's tests and the package's, and neither reaches
+        # `package/benchmark`, so a benchmark that stopped compiling says nothing
+        # until somebody opens the reactor.
+        benchmarkCheckCmd = "${generateElm}\ncd package/benchmark && node generate-position-fixture.mjs && node generate-fixture.mjs && cd .. && elm make benchmark/PerFrameBenchmark.elm --output=/dev/null && elm make benchmark/PositionBenchmark.elm --output=/dev/null";
+
         # The fetcher encodes what it downloads, so it needs libwebp beside Node.
         # Kept apart from `mkNodeApp`: every other Node command would carry the
         # encoder for nothing.
@@ -231,7 +236,8 @@
           test-vrt             = { type = "app"; program = "${vrt.mkApp "test-vrt" vrtTestCmd}/bin/test-vrt";                     meta.description = "Run Playwright VRT tests"; };
           update-snapshots-vrt = { type = "app"; program = "${vrt.mkApp "update-snapshots-vrt" vrtUpdateCmd}/bin/update-snapshots-vrt"; meta.description = "Update Playwright VRT snapshots"; };
           update-snapshots-ci  = { type = "app"; program = "${vrt.updateSnapshotsCiApp}/bin/update-snapshots-ci";                                                             meta.description = "Re-render the VRT baselines on CI's Linux and push them onto this branch"; };
-          benchmark            = { type = "app"; program = "${mkNodeApp "benchmark"            "cd package/benchmark && node generate-position-fixture.mjs && node generate-fixture.mjs && elm reactor"}/bin/benchmark"; meta.description = "Serve the package benchmarks (elm reactor)"; };
+          benchmark            = { type = "app"; program = "${mkNodeApp "benchmark"            "${generateElm}\ncd package/benchmark && node generate-position-fixture.mjs && node generate-fixture.mjs && elm reactor"}/bin/benchmark"; meta.description = "Serve the package benchmarks (elm reactor)"; };
+          benchmark-check      = { type = "app"; program = "${mkNodeApp "benchmark-check"      benchmarkCheckCmd}/bin/benchmark-check";        meta.description = "Compile the package benchmarks against generated fixtures, running nothing"; };
           typecheck            = { type = "app"; program = "${mkNodeApp "typecheck"            "cd app && pnpm run typecheck"}/bin/typecheck";                                            meta.description = "Type-check the app's TypeScript (tsc --noEmit)"; };
           review-app           = { type = "app"; program = "${mkNodeApp "review-app"           "${generateElm}\ncd app && elm-review src"}/bin/review-app";                          meta.description = "Run elm-review on app"; };
           review-package       = { type = "app"; program = "${mkNodeApp "review-package"       "cd package && elm-review src"}/bin/review-package";                  meta.description = "Run elm-review on package"; };
