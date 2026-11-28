@@ -20,13 +20,11 @@ pub mod Round.Render {
     pub def renderSummary(metadata: Metadata.Metadata, index: Index.Index): String =
         Extra.render(withIndex(Metadata.toJson(metadata), Index.toJson(hasMiniSectors(metadata), index)))
 
-    /// Whether the round's feed measured mini-sectors -- the round's
-    /// `track.miniSectors` being there.
     def hasMiniSectors(metadata: Metadata.Metadata): Bool =
         match metadata#track#miniSectors {
-            case None        => false
-            case Some(_ :: _) => true
-            case Some(Nil)   => false
+            case None          => false
+            case Some(_ :: _)  => true
+            case Some(Nil)     => false
         }
 
     def withIndex(metadata: Json, index: Json): Json =

@@ -57,7 +57,7 @@ SELECT DISTINCT class FROM entries;          -- against the era's grid
 ```
 
 - **A manufacturer the hand-written table has no row for stops nothing** — the car keeps the feed's name and takes a colour from its number, and no build fails. Add a row to `data/wec/manufacturers.json`.
-- **A Le Mans feed split other than fifteen mini-sectors** reads as `NoMiniSectors` (`byMiniSectorDecoder` requires all fifteen keys) — check the mini-sector columns of a new-season Le Mans CSV before believing a round drawn without them.
+- **A Le Mans feed split other than fifteen mini-sectors** reads as `NoMiniSectors` (the load parses only the columns `Motorsport.MiniSector` names, so a split it does not name measures nothing) — check the mini-sector columns of a new-season Le Mans CSV before believing a round drawn without them.
 - **Whether the circuit's timing lines still stand** in a new season's map is what the geometry upstream is re-laid against; a map that moved its lines takes a geometry re-lay, and a moved geometry takes every tracker baseline it draws.
 
 ## 5. Photographs and kept files

@@ -27,7 +27,7 @@ What survives that question is one of four kinds:
 
 - **A command or a check** — what to run, and what gates a change.
 - **A repository-wide rule** — the comment rules, a naming convention, where a new module goes.
-- **A hazard that spans owners** — one no single file can hold because the mistake happens between two of them (`LeMansMiniSectors` is load-bearing in three modules at once).
+- **A hazard that spans owners** — one no single file can hold because the mistake happens between two of them (`Motorsport.MiniSector` is joined by name in three modules at once).
 - **A pointer** — which document to read before touching a subject.
 
 A hazard inside one module is that module's header's, however serious it is: being a hazard licenses the sentence, not the placement.

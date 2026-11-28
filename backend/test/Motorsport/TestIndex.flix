@@ -79,9 +79,7 @@ pub mod Motorsport.TestIndex {
         Assert.assertTrue(String.contains({substr = "\"fastestLapTime\": []"}, json));
         Assert.assertTrue(String.contains({substr = "\"flagChanges\": []"}, json))
 
-    /// The fifteen blank mini-sectors a round whose feed measured none would
-    /// write are no one's record: the key is absent there and every name there
-    /// here, which is the same fact `track.miniSectors` states.
+    /// Whether the key is there is the same fact `track.miniSectors` states.
     @Test
     def miniSectorsAreAbsentWhereTheFeedMeasuredNone(): Unit \ Assert =
         let without = Extra.render(Index.toJson(false, sample()));
