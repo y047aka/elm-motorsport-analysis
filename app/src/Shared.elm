@@ -25,6 +25,7 @@ import Motorsport.Analysis.Energy as Energy
 import Motorsport.Analysis.Strategy as Strategy
 import Motorsport.Chart.Tracker as Tracker
 import Motorsport.Chart.Tracker.Config exposing (MiniSectorShares(..))
+import Motorsport.Circuit.Layout exposing (Layout)
 import Motorsport.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.MiniSector as MiniSector
@@ -39,7 +40,6 @@ import Motorsport.Wec.Circuit.Cota.Layout as CotaLayout
 import Motorsport.Wec.Circuit.Fuji.Layout as FujiLayout
 import Motorsport.Wec.Circuit.Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.Imola.Layout as ImolaLayout
-import Motorsport.Wec.Circuit.Layout exposing (Layout)
 import Motorsport.Wec.Circuit.LeMans.Layout as LeMansLayout
 import Motorsport.Wec.Circuit.Map as Map
 import Motorsport.Wec.Circuit.Monza.Layout as MonzaLayout

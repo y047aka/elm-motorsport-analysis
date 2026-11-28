@@ -16,13 +16,13 @@ import Motorsport.Chart.Tracker.Detail exposing (Detail(..), Labels(..))
 import Motorsport.Chart.Tracker.LapScale as LapScale exposing (LapScale)
 import Motorsport.Chart.Tracker.Marker as Marker
 import Motorsport.Circuit.Direction exposing (Direction(..))
+import Motorsport.Circuit.Layout exposing (Layout, Lengths)
 import Motorsport.Circuit.Relief as Relief exposing (Relief)
 import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
 import Motorsport.Class as Class
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Sector as Sector
 import Motorsport.Simulation.Pace.ReferenceLap as ReferenceLap
-import Motorsport.Wec.Circuit.Layout exposing (Layout, Lengths)
 import Quantity
 import Svg exposing (Svg, g, line, polygon, polyline, svg, text, text_)
 import Svg.Attributes exposing (class, dominantBaseline, fill, points, stroke, strokeLinejoin, textAnchor)
@@ -62,7 +62,7 @@ type alias Bounds =
 Between two lines a car runs at the pace the circuit's bends allow: see [`LapScale`](Motorsport-Chart-Tracker-LapScale).
 The pit lane is drawn and no car is placed on it; the lap runs the direction its survey was chained in.
 
-The lengths it is drawn at come with the circuit: see [`Lengths`](Motorsport-Wec-Circuit-Layout#Lengths).
+The lengths it is drawn at come with the circuit: see [`Lengths`](Motorsport-Circuit-Layout#Lengths).
 
 It works out the circuit's reference lap, so a circuit is built once and drawn every frame, not built every frame.
 

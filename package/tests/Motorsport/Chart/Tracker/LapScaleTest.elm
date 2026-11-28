@@ -4,6 +4,7 @@ import Expect
 import Length
 import Motorsport.Chart.Tracker.Config exposing (MiniSectorShares(..), TrackConfig)
 import Motorsport.Chart.Tracker.LapScale as LapScale exposing (LapScale)
+import Motorsport.Circuit.Layout exposing (MiniSectorLines(..), TimingLines)
 import Motorsport.Circuit.Shape as Shape
 import Motorsport.MiniSector as MiniSector
 import Motorsport.Race.Snapshot as Snapshot
@@ -11,7 +12,6 @@ import Motorsport.Race.SnapshotTest as SnapshotTest
 import Motorsport.Simulation.Pace.Neutralisation as Neutralisation
 import Motorsport.Simulation.Pace.ReferenceLap as ReferenceLap
 import Motorsport.Simulation.Pace.ReferenceLapTest as ReferenceLapTest
-import Motorsport.Wec.Circuit.Layout exposing (MiniSectorLines(..), TimingLines)
 import Test exposing (Test, describe, test)
 
 

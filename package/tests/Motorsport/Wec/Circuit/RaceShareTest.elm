@@ -9,11 +9,11 @@ At Le Mans the lines are the seven of its mini-sectors' the map gives a distance
 
 import Expect
 import Length
+import Motorsport.Circuit.Layout exposing (Layout, MiniSectorLines(..))
 import Motorsport.Circuit.Shape as Shape
 import Motorsport.MiniSector as MiniSector
 import Motorsport.Simulation.Pace.ReferenceLap as ReferenceLap exposing (ReferenceLap)
 import Motorsport.Wec.Circuit.CircuitsTest as Circuits
-import Motorsport.Wec.Circuit.Layout exposing (Layout, MiniSectorLines(..))
 import Quantity
 import Test exposing (Test, describe, test)
 

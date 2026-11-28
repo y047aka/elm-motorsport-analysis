@@ -6,6 +6,7 @@ A circuit joins with a row in `circuits`.
 
 import Expect
 import Json.Decode as Decode exposing (Decoder)
+import Motorsport.Circuit.Layout exposing (Layout)
 import Motorsport.Circuit.Shape as Shape
 import Motorsport.TestHelpers.Map.Barcelona as BarcelonaMap
 import Motorsport.TestHelpers.Map.Cota as CotaMap
@@ -29,7 +30,6 @@ import Motorsport.Wec.Circuit.Cota.Layout as Cota
 import Motorsport.Wec.Circuit.Fuji.Layout as Fuji
 import Motorsport.Wec.Circuit.Geometry exposing (Geometry)
 import Motorsport.Wec.Circuit.Imola.Layout as Imola
-import Motorsport.Wec.Circuit.Layout exposing (Layout)
 import Motorsport.Wec.Circuit.LeMans.Layout as LeMans
 import Motorsport.Wec.Circuit.Map as Map
 import Motorsport.Wec.Circuit.Monza.Layout as Monza

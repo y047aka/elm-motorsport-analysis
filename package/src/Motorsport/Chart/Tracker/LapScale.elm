@@ -13,12 +13,12 @@ module Motorsport.Chart.Tracker.LapScale exposing
 import Duration exposing (Seconds)
 import Length exposing (Length)
 import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorShares(..), Share, TrackConfig)
+import Motorsport.Circuit.Layout exposing (MiniSectorLines(..), TimingLines)
 import Motorsport.MiniSector as MiniSector
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Sector as Sector
 import Motorsport.Simulation.Pace.Neutralisation as Neutralisation exposing (Neutralisation)
 import Motorsport.Simulation.Pace.ReferenceLap as ReferenceLap exposing (ReferenceLap)
-import Motorsport.Wec.Circuit.Layout exposing (MiniSectorLines(..), TimingLines)
 import Quantity exposing (Quantity)
 
 

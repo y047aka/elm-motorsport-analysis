@@ -6,7 +6,7 @@ it, and where round the lap the lines it is timed at stand.
 The lap itself arrives as the served geometry -- `static/geometry/le_mans.geojson`,
 decoded and checked by [`Motorsport.Wec.Circuit.Geometry`](Motorsport-Wec-Circuit-Geometry).
 Where its lines stand is the circuit map's, handed in as a [`CircuitMap`](#CircuitMap), and what is written here is the drawing's lengths.
-The record they are written into and the projection the degrees are drawn through are [`Motorsport.Wec.Circuit.Layout`](Motorsport-Wec-Circuit-Layout), which every circuit is drawn out of.
+The record they are written into and the projection the degrees are drawn through are [`Motorsport.Circuit.Layout`](Motorsport-Circuit-Layout), which every circuit is drawn out of.
 
 @docs CircuitMap, mapDecoder, decoder, layout
 
@@ -14,10 +14,10 @@ The record they are written into and the projection the degrees are drawn throug
 
 import Json.Decode as Decode exposing (Decoder)
 import Length exposing (Length)
+import Motorsport.Circuit.Layout as Circuit exposing (Layout, MiniSectorLines(..), TimingLines)
 import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
 import Motorsport.Sector as Sector exposing (Sector(..))
 import Motorsport.Wec.Circuit.Geometry as Geometry exposing (Geometry)
-import Motorsport.Wec.Circuit.Layout as Circuit exposing (Layout, MiniSectorLines(..), TimingLines)
 import Motorsport.Wec.Circuit.Map as Map
 
 

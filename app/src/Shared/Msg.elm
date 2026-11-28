@@ -13,9 +13,9 @@ import Data.Wec.CarImage exposing (CarImages)
 import Data.Wec.Laps as WecLaps
 import Http
 import Motorsport.Circuit.Direction exposing (Direction)
+import Motorsport.Circuit.Layout exposing (Layout)
 import Motorsport.Race.TimelineEvent exposing (TimelineEvent)
 import Motorsport.Replay as Replay
-import Motorsport.Wec.Circuit.Layout exposing (Layout)
 
 
 {-| The file responses carry the round they were asked for.

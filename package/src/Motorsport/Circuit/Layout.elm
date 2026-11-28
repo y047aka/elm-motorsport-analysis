@@ -1,4 +1,4 @@
-module Motorsport.Wec.Circuit.Layout exposing
+module Motorsport.Circuit.Layout exposing
     ( Layout, TimingLines, MiniSectorLines(..)
     , Lengths, LabelLengths
     , shapeOf, pitLaneOf, reliefOf

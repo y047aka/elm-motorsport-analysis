@@ -6,7 +6,7 @@ module Motorsport.Chart.Tracker.Detail exposing (Detail(..), Labels(..))
 
 -}
 
-import Motorsport.Wec.Circuit.Layout exposing (LabelLengths)
+import Motorsport.Circuit.Layout exposing (LabelLengths)
 
 
 {-| How much of the chart is drawn. The chart is scaled to whatever box it is

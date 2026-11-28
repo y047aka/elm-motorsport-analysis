@@ -13,8 +13,8 @@ import Motorsport.Chart.Tracker.Config exposing (TrackConfig)
 import Motorsport.Chart.Tracker.Detail exposing (Detail)
 import Motorsport.Chart.Tracker.Ring as Ring
 import Motorsport.Circuit.Direction exposing (Direction)
+import Motorsport.Circuit.Layout exposing (Layout)
 import Motorsport.Race.Snapshot exposing (Snapshot)
-import Motorsport.Wec.Circuit.Layout exposing (Layout)
 import Svg exposing (Svg)
 
 

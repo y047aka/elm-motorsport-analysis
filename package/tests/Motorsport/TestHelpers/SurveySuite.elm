@@ -14,8 +14,8 @@ below its zero.
 import Angle
 import Expect
 import Motorsport.Circuit.Geodesy exposing (Coordinate, Frame, project)
+import Motorsport.Circuit.Layout exposing (Layout)
 import Motorsport.Circuit.Shape as Shape exposing (Point)
-import Motorsport.Wec.Circuit.Layout exposing (Layout)
 import Test exposing (Test, describe, test)
 
 

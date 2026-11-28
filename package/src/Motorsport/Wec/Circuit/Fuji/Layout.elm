@@ -8,7 +8,7 @@ decoded and checked by [`Motorsport.Wec.Circuit.Geometry`](Motorsport-Wec-Circui
 -- and what is written here is what the file cannot know: the drawing's lengths
 and the lines the round is timed at. The record and the projection the degrees
 are drawn through are
-[`Motorsport.Wec.Circuit.Layout`](Motorsport-Wec-Circuit-Layout), which every
+[`Motorsport.Circuit.Layout`](Motorsport-Circuit-Layout), which every
 circuit is drawn out of.
 
 Fuji is surveyed from a box of raceway ways rather than a relation; its drawn zero stands at a place the circuit project's config authors, between two surveyed nodes rather than on one, and says how it was found.
@@ -18,10 +18,10 @@ Fuji is surveyed from a box of raceway ways rather than a relation; its drawn ze
 -}
 
 import Json.Decode exposing (Decoder)
+import Motorsport.Circuit.Layout as Circuit exposing (Layout, MiniSectorLines(..), TimingLines)
 import Motorsport.Circuit.Shape as Shape exposing (Point, Shape)
 import Motorsport.Sector as Sector exposing (Sector(..))
 import Motorsport.Wec.Circuit.Geometry as Geometry exposing (Geometry)
-import Motorsport.Wec.Circuit.Layout as Circuit exposing (Layout, MiniSectorLines(..), TimingLines)
 import Motorsport.Wec.Circuit.Map exposing (Intermediates)
 
 
