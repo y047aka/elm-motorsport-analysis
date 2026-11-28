@@ -86,11 +86,13 @@
           done
         '';
 
-        # `app/codegen`'s output, `app/generated/`, is not committed, so every command that compiles the app writes it first; elm-codegen comes from `app/node_modules`.
+        # `app/codegen`'s output — `app/generated/`, and the package's `TestHelpers/Survey/` and `TestHelpers/Map/` — is not committed, so every command that compiles the app or its tests writes it first; elm-codegen comes from `app/node_modules`.
         # elm-codegen 0.6 exits 0 when the generator itself does not compile, so the old output is removed first: a broken generator then fails the app's compile by module name instead of leaving last run's table in place.
+        # The fixture step reads `app/static/`, so a caller runs `syncCircuitData` before this, and its modules are removed with `app/generated/` so a circuit dropped upstream leaves none behind.
         generateElm = ''
-          rm -rf app/generated
+          rm -rf app/generated package/tests/Motorsport/TestHelpers/Survey package/tests/Motorsport/TestHelpers/Map
           (cd app && pnpm exec elm-codegen run --flags-from ../data/wec/manufacturers.json --output generated)
+          node app/codegen/test-fixtures.mjs
         '';
 
         # Where the CLI and the server compute when the caller names nowhere
@@ -227,13 +229,13 @@
         apps = {
           dev                  = { type = "app"; program = "${mkNodeApp "dev"                  "${syncCircuitData}\n${generateElm}\ncd app && pnpm start"}/bin/dev";                                     meta.description = "Start Vite dev server (localhost:1234)"; };
           build                = { type = "app"; program = "${mkNodeApp "build"                "${syncCircuitData}\n${generateElm}\ncd app && pnpm run build"}/bin/build";                               meta.description = "Production build"; };
-          test                 = { type = "app"; program = "${mkNodeApp "test"                 "${syncCircuitData}\n${generateElm}\ncd app && elm-test && cd .. && node app/scripts/test-fixtures.mjs && cd package && elm-verify-examples && elm-test"}/bin/test";           meta.description = "Run Elm tests: the app's, then the package's (on the served geometry bytes, via elm-verify-examples + elm-test)"; };
+          test                 = { type = "app"; program = "${mkNodeApp "test"                 "${syncCircuitData}\n${generateElm}\ncd app && elm-test && cd ../package && elm-verify-examples && elm-test"}/bin/test";           meta.description = "Run Elm tests: the app's, then the package's (on the served geometry bytes, via elm-verify-examples + elm-test)"; };
           test-vrt             = { type = "app"; program = "${vrt.mkApp "test-vrt" vrtTestCmd}/bin/test-vrt";                     meta.description = "Run Playwright VRT tests"; };
           update-snapshots-vrt = { type = "app"; program = "${vrt.mkApp "update-snapshots-vrt" vrtUpdateCmd}/bin/update-snapshots-vrt"; meta.description = "Update Playwright VRT snapshots"; };
           update-snapshots-ci  = { type = "app"; program = "${vrt.updateSnapshotsCiApp}/bin/update-snapshots-ci";                                                             meta.description = "Re-render the VRT baselines on CI's Linux and push them onto this branch"; };
           benchmark            = { type = "app"; program = "${mkNodeApp "benchmark"            "cd package/benchmark && node generate-position-fixture.mjs && node generate-fixture.mjs && elm reactor"}/bin/benchmark"; meta.description = "Serve the package benchmarks (elm reactor)"; };
           typecheck            = { type = "app"; program = "${mkNodeApp "typecheck"            "cd app && pnpm run typecheck"}/bin/typecheck";                                            meta.description = "Type-check the app's TypeScript (tsc --noEmit)"; };
-          review-app           = { type = "app"; program = "${mkNodeApp "review-app"           "${generateElm}\ncd app && elm-review src"}/bin/review-app";                          meta.description = "Run elm-review on app"; };
+          review-app           = { type = "app"; program = "${mkNodeApp "review-app"           "${syncCircuitData}\n${generateElm}\ncd app && elm-review src"}/bin/review-app";                          meta.description = "Run elm-review on app"; };
           review-package       = { type = "app"; program = "${mkNodeApp "review-package"       "cd package && elm-review src"}/bin/review-package";                  meta.description = "Run elm-review on package"; };
           format               = { type = "app"; program = "${mkNodeApp "format"               "elm-format --yes app/src package/src"}/bin/format";                   meta.description = "Format Elm code (elm-format)"; };
           car-images           = { type = "app"; program = "${carImagesApp}/bin/car-images";                                                                            meta.description = "Download a season's car photographs and register them"; };
