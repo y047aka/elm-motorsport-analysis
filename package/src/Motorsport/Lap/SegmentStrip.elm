@@ -25,7 +25,7 @@ import Html exposing (Html, div, text)
 import Html.Attributes exposing (class, style, title)
 import Motorsport.Duration as Duration
 import Motorsport.Lap.Performance as Performance exposing (RatedTime, SegmentState)
-import Motorsport.MiniSector exposing (Named)
+import Motorsport.MiniSector exposing (MiniSectors)
 import Motorsport.Sector as Sector exposing (BySector, Sector)
 
 
@@ -52,14 +52,14 @@ sectorsRated rated =
 {-| The mini-sector strip: the round's mini-sectors in track order, with a spacer
 where each of the first two sectors ends.
 -}
-miniSectors : Named SegmentState -> Html msg
+miniSectors : MiniSectors SegmentState -> Html msg
 miniSectors states =
     miniStrip progressCell states
 
 
 {-| The same strip for a lap that is over.
 -}
-miniSectorsRated : Named (Maybe RatedTime) -> Html msg
+miniSectorsRated : MiniSectors (Maybe RatedTime) -> Html msg
 miniSectorsRated rated =
     miniStrip ratedCell rated
 
@@ -69,7 +69,7 @@ two of them are the gaps where a sector ends -- so the cells are laid out with
 those gaps rather than mapped straight over the mini-sectors, which is why the
 round has to have exactly as many mini-sectors as the columns are wide.
 -}
-miniStrip : (String -> a -> Html msg) -> Named a -> Html msg
+miniStrip : (String -> a -> Html msg) -> MiniSectors a -> Html msg
 miniStrip cell entries =
     div [ class miniSectorColumns ]
         (entries

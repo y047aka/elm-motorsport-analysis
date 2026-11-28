@@ -27,7 +27,7 @@ import Json.Decode.Pipeline exposing (optional, required)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
-import Motorsport.MiniSector as MiniSector exposing (Named)
+import Motorsport.MiniSector as MiniSector exposing (MiniSectors)
 import Motorsport.Sector as Sector exposing (BySector)
 
 
@@ -67,7 +67,7 @@ done to the nineteen records goes through `map`, so they are enumerated once.
 type alias ByRecord a =
     { fastestLapTime : a
     , fastestSectors : BySector a
-    , fastestMiniSectors : Named a
+    , fastestMiniSectors : MiniSectors a
     }
 
 
@@ -104,7 +104,7 @@ changesDecoder =
         |> optional "miniSectors" miniSectorsDecoder []
 
 
-miniSectorsDecoder : Decoder (Named (ChangePoints Holder))
+miniSectorsDecoder : Decoder (MiniSectors (ChangePoints Holder))
 miniSectorsDecoder =
     Decode.list
         (Decode.map2 (\name changes -> { name = name, value = changes })

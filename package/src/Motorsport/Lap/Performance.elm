@@ -31,7 +31,7 @@ what a time rated against them is, and rates the times of a lap one by one.
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
-import Motorsport.MiniSector as MiniSector exposing (Named)
+import Motorsport.MiniSector as MiniSector exposing (MiniSectors)
 import Motorsport.Sector as Sector exposing (BySector)
 
 
@@ -72,7 +72,7 @@ ofSectors bestTimes lap =
 
 
 type alias MiniSectorPerformance =
-    Named (Maybe RatedTime)
+    MiniSectors (Maybe RatedTime)
 
 
 ofMiniSectors : BestTimes.Snapshot -> Lap -> Maybe MiniSectorPerformance

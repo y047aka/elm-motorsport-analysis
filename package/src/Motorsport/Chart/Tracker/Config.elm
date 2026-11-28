@@ -22,7 +22,7 @@ name off a list as long as the lap is split fine.
 -}
 
 import Motorsport.Duration exposing (Duration)
-import Motorsport.MiniSector as MiniSector exposing (Named)
+import Motorsport.MiniSector as MiniSector exposing (MiniSectors)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector exposing (BySector)
 
@@ -38,7 +38,7 @@ type alias TrackConfig =
 
 {-| One stretch of the lap: where it begins and how much of the lap it takes,
 both as fractions of the whole. Which stretch it is belongs to the position in
-a `BySector`, or to the name in a `MiniSector.Named`.
+a `BySector`, or to the name in a `MiniSector.MiniSectors`.
 -}
 type alias Share =
     { start : Float
@@ -50,7 +50,7 @@ type alias Share =
 -}
 type MiniSectorShares
     = NoMiniSectors
-    | MiniSectorShares (Named Share)
+    | MiniSectorShares (MiniSectors Share)
 
 
 {-| How far round the lap a car is, as a fraction of it.

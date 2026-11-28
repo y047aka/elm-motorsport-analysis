@@ -22,7 +22,7 @@ import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
-import Motorsport.MiniSector as MiniSector exposing (Named)
+import Motorsport.MiniSector as MiniSector exposing (MiniSectors)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Sector as Sector exposing (BySector)
 
@@ -239,7 +239,7 @@ finalizeCarLaps miniSectorNames raws =
 type alias Bests =
     { lap : Maybe Duration
     , sectors : BySector (Maybe Duration)
-    , miniSectors : Named (Maybe Duration)
+    , miniSectors : MiniSectors (Maybe Duration)
     }
 
 
@@ -338,7 +338,7 @@ accumulate miniSectorNames raw ( bests, acc ) =
 a mini-sector with no time and no running total, which
 [`Lap.miniSegments`](Motorsport-Lap#miniSegments) leaves unplaced.
 -}
-byTrackOrder : List String -> Dict String RawMiniSector -> Named RawMiniSector
+byTrackOrder : List String -> Dict String RawMiniSector -> MiniSectors RawMiniSector
 byTrackOrder names byName =
     List.map
         (\name ->

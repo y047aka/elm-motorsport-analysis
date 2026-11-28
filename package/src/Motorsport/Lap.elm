@@ -1,7 +1,7 @@
 module Motorsport.Lap exposing
     ( Lap
     , SectorTime, SectorTimes
-    , MiniSectors, MiniSectorTime
+    , MiniSectorTime
     , recorded
     , Crossing(..), isInLap, isRacingLap, pitEntryAt, laneTimeOf, pitExitAt, pitStopOf
     , Flag(..), atRacePace
@@ -17,7 +17,7 @@ module Motorsport.Lap exposing
 
 @docs Lap
 @docs SectorTime, SectorTimes
-@docs MiniSectors, MiniSectorTime
+@docs MiniSectorTime
 @docs recorded
 @docs Crossing, isInLap, isRacingLap, pitEntryAt, laneTimeOf, pitExitAt, pitStopOf
 @docs Flag, atRacePace
@@ -47,7 +47,7 @@ import List.Extra
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
-import Motorsport.MiniSector exposing (Named)
+import Motorsport.MiniSector exposing (MiniSectors)
 import Motorsport.PitStop exposing (PitStop)
 import Motorsport.Position exposing (Position)
 import Motorsport.Sector as Sector exposing (BySector, Sector(..))
@@ -64,7 +64,7 @@ type alias Lap =
     , elapsed : Instant
     , crossing : Crossing
     , flag : Flag
-    , miniSectors : Maybe MiniSectors
+    , miniSectors : Maybe (MiniSectors MiniSectorTime)
     }
 
 
@@ -83,13 +83,6 @@ type alias SectorTime =
 
 type alias SectorTimes =
     BySector SectorTime
-
-
-{-| The mini-sectors of one lap, in track order, under the names the feed that
-measured them spells them with.
--}
-type alias MiniSectors =
-    Named MiniSectorTime
 
 
 {-| [`SectorTime`](#SectorTime) at the finer grain, with one addition:

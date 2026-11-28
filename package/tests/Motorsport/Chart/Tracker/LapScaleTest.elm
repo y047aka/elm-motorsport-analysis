@@ -282,7 +282,7 @@ names =
     [ "SCL2", "Z4", "IP1", "Z12", "SCLC", "A7-1", "IP2", "A8-1", "SCLB", "PORIN", "POROUT", "PITREF", "SCL1", "FORDOUT", "FL" ]
 
 
-everyMiniSector : (String -> a) -> MiniSector.Named a
+everyMiniSector : (String -> a) -> MiniSector.MiniSectors a
 everyMiniSector f =
     List.map (\name -> { name = name, value = f name }) names
 

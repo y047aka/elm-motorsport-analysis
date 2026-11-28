@@ -10,7 +10,7 @@ import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (PerformanceLevel(..), SegmentState(..))
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.MiniSector as MiniSector exposing (Named)
+import Motorsport.MiniSector as MiniSector exposing (MiniSectors)
 import Motorsport.Race as Race
 import Motorsport.Race.Car as Car exposing (Car)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Lane, Snapshot)
@@ -491,7 +491,7 @@ sectorStatesOf carNumber snapshot =
 {-| The fifteen mini-sectors the Le Mans fixtures are split by, in track order,
 and a value for each.
 -}
-everyMiniSector : (String -> a) -> Named a
+everyMiniSector : (String -> a) -> MiniSectors a
 everyMiniSector f =
     List.map (\name -> { name = name, value = f name }) miniSectorNames
 

@@ -18,7 +18,7 @@ import Motorsport.Chart.Tracker.Config exposing (MiniSectorShares(..), Share, Tr
 import Motorsport.Class as Class
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Instant as Instant exposing (Instant)
-import Motorsport.MiniSector as MiniSector exposing (Named)
+import Motorsport.MiniSector as MiniSector exposing (MiniSectors)
 import Motorsport.Race as Race
 import Motorsport.Race.Car as Car
 import Motorsport.Sector exposing (BySector)
@@ -195,7 +195,7 @@ bySectorDecoder =
         |> required "s3" shareDecoder
 
 
-miniSectorsDecoder : Decoder (Named Share)
+miniSectorsDecoder : Decoder (MiniSectors Share)
 miniSectorsDecoder =
     Decode.list namedShareDecoder
         |> Decode.andThen

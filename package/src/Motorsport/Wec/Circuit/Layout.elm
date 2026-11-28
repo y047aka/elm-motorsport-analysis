@@ -24,7 +24,7 @@ import Length exposing (Length)
 import Motorsport.Circuit.Geodesy exposing (Frame, project)
 import Motorsport.Circuit.Relief as Relief exposing (Relief)
 import Motorsport.Circuit.Shape as Shape exposing (Mark, Point, Shape)
-import Motorsport.MiniSector exposing (Named)
+import Motorsport.MiniSector as MiniSector
 import Motorsport.Sector exposing (BySector)
 
 
@@ -68,7 +68,7 @@ are read together.
 -}
 type MiniSectorLines
     = SectorsOnly
-    | MiniSectors (Named (Maybe Length))
+    | MiniSectors (MiniSector.MiniSectors (Maybe Length))
 
 
 {-| The lengths one detail of a circuit's drawing is made at, in metres on the

@@ -30,7 +30,7 @@ import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (MiniSectorPerformance, PerformanceLevel, RatedTime, SectorPerformance, SegmentState)
-import Motorsport.MiniSector exposing (Named)
+import Motorsport.MiniSector exposing (MiniSectors)
 import Motorsport.PitStop exposing (PitStop)
 import Motorsport.Position exposing (Position)
 import Motorsport.Race as Race exposing (Race)
@@ -183,7 +183,7 @@ type alias CurrentSectorStates =
 {-| The same reading at the finer grain.
 -}
 type alias CurrentMiniSectorStates =
-    Named SegmentState
+    MiniSectors SegmentState
 
 
 {-| Read the whole race at a moment of it.

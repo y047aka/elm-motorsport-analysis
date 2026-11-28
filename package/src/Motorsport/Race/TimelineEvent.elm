@@ -27,7 +27,7 @@ import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Flag as Flag exposing (Flag)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
-import Motorsport.MiniSector exposing (Named)
+import Motorsport.MiniSector exposing (MiniSectors)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Sector exposing (BySector)
 
@@ -55,7 +55,7 @@ type alias LapDetail =
     { driver : Driver
     , lap : Rated
     , sectors : BySector Rated
-    , miniSectors : Maybe (Named Rated)
+    , miniSectors : Maybe (MiniSectors Rated)
     }
 
 
@@ -274,7 +274,7 @@ mini-sectors are not this shape reads as no mini-sectors, and is drawn on the
 three sectors.
 
 -}
-ratedByMiniSectorDecoder : Decoder (Named Rated)
+ratedByMiniSectorDecoder : Decoder (MiniSectors Rated)
 ratedByMiniSectorDecoder =
     Decode.list
         (Decode.map2 (\name rated -> { name = name, value = rated })

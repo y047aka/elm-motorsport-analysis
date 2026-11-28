@@ -1,5 +1,5 @@
 module Motorsport.MiniSector exposing
-    ( Named, map, names, values, toList
+    ( MiniSectors, map, names, values, toList
     , get, map2
     )
 
@@ -11,7 +11,7 @@ its line and the string two lists are joined on are the same one, spelled by
 whichever feed measured the lap. So a circuit with lines of its own supplies them
 in a file, and nothing here has to be told their names.
 
-@docs Named, map, names, values, toList
+@docs MiniSectors, map, names, values, toList
 @docs get, map2
 
 -}
@@ -26,41 +26,41 @@ no position to read a value off, and a name is looked up rather than indexed.
     --> [ "IP1", "IP2" ]
 
 -}
-type alias Named a =
+type alias MiniSectors a =
     List { name : String, value : a }
 
 
 {-| The names, in track order.
 -}
-names : Named a -> List String
+names : MiniSectors a -> List String
 names =
     List.map .name
 
 
 {-| The values, in track order.
 -}
-values : Named a -> List a
+values : MiniSectors a -> List a
 values =
     List.map .value
 
 
 {-| The name and value of each mini-sector, in track order.
 -}
-toList : Named a -> List ( String, a )
+toList : MiniSectors a -> List ( String, a )
 toList =
     List.map (\entry -> ( entry.name, entry.value ))
 
 
 {-| Change every value, keeping the names and the order.
 -}
-map : (a -> b) -> Named a -> Named b
+map : (a -> b) -> MiniSectors a -> MiniSectors b
 map f =
     List.map (\entry -> { name = entry.name, value = f entry.value })
 
 
 {-| The value held for one name.
 -}
-get : String -> Named a -> Maybe a
+get : String -> MiniSectors a -> Maybe a
 get name entries =
     case entries of
         [] ->
@@ -86,7 +86,7 @@ drops its entry.
     --> [ { name = "IP1", value = ( 1, "a" ) }, { name = "IP2", value = ( 2, "b" ) } ]
 
 -}
-map2 : (a -> b -> c) -> Named a -> Named b -> Named c
+map2 : (a -> b -> c) -> MiniSectors a -> MiniSectors b -> MiniSectors c
 map2 f a b =
     List.filterMap
         (\entry ->
