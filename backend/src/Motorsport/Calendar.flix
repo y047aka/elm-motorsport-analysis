@@ -22,6 +22,10 @@ pub mod Motorsport.Calendar {
         date   = String
     }
 
+    /// The championship this calendar is, in the one word both roots are built on.
+    pub def series(): String =
+        "wec"
+
     /// The seasons the app has, newest first.
     ///
     /// Written down rather than derived, because none of it is in the feed: the

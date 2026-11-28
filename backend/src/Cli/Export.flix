@@ -38,7 +38,8 @@ pub mod Cli.Export {
     /// Not where the files are written to. That is the run's `--out`, and
     /// `../app/static/wec` and `/static/wec` are the same place reached two
     /// different ways.
-    pub def urlRoot(): String = "/static/wec"
+    pub def urlRoot(): String =
+        "/static/${Calendar.series()}"
 
     pub def runAll(root: String, rounds: FileTask.Rounds): Int32 \ {IO, Console, SqlRead, RawSql} =
         let tasks = FileTask.outputs(root, rounds);

@@ -48,6 +48,14 @@ pub mod Server.TestApi {
         Assert.assertTrue(Api.route("/api/wec") == Route.NotFound);
         Assert.assertTrue(Api.route("/static/wec/index.json") == Route.NotFound)
 
+    /// The series segment admits one championship and answers every other word
+    /// the same way no round does.
+    @Test
+    def anUnknownSeriesIsNotFound(): Unit \ Assert =
+        Assert.assertTrue(Api.route("/api/f1/index.json") == Route.NotFound);
+        Assert.assertTrue(Api.route("/api/f1/2025/fuji_6h.json") == Route.NotFound);
+        Assert.assertTrue(Api.route("/api/WEC/2025/fuji_6h.json") == Route.NotFound)
+
     /// A database that is down is not a reason to be unable to list the
     /// rounds: the calendar is written down, not counted out of the rows.
     @Test

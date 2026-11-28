@@ -42,13 +42,16 @@ pub mod Server.Api {
     /// Where the app reads the rounds from, as `/static/wec` is where it reads
     /// the exported files from. A round is named here the way the export names
     /// its files, so one path is the other with its root replaced.
-    pub def urlRoot(): String = "/api/wec"
+    pub def urlRoot(): String =
+        "/api/${Calendar.series()}"
 
+    /// The series segment is read, not matched: a path under a series no
+    /// calendar answers to is no one's round.
     pub def route(path: String): Route =
         match String.splitOn({substr = "/"}, path) {
             case "" :: "api" :: "health" :: Nil => Route.Health
-            case "" :: "api" :: "wec" :: "index.json" :: Nil => Route.Calendar
-            case "" :: "api" :: "wec" :: season :: file :: Nil => roundRoute(season, file)
+            case "" :: "api" :: series :: "index.json" :: Nil if series == Calendar.series() => Route.Calendar
+            case "" :: "api" :: series :: season :: file :: Nil if series == Calendar.series() => roundRoute(season, file)
             case _ => Route.NotFound
         }
 
