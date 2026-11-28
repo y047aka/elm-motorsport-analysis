@@ -42,7 +42,7 @@ messages cars timeline =
         carsByNumber =
             List.foldr (\car -> Dict.insert car.metadata.carNumber car) Dict.empty cars
     in
-    [ A2ui.CreateSurface { surfaceId = surfaceId, catalogId = Catalog.catalogId }
+    [ A2ui.CreateSurface { surfaceId = surfaceId, catalogId = Catalog.catalogId, components = [], dataModel = Nothing }
     , A2ui.UpdateComponents { surfaceId = surfaceId, components = components }
     , A2ui.UpdateDataModel
         { surfaceId = surfaceId

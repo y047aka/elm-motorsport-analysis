@@ -43,7 +43,13 @@ roundTrip message =
 
 messages : List Message
 messages =
-    [ CreateSurface { surfaceId = "s", catalogId = "urn:test" }
+    [ CreateSurface
+        { surfaceId = "inline"
+        , catalogId = "urn:test"
+        , components = [ component "root" "Text" [ ( "text", bound "/greeting" ) ] ]
+        , dataModel = Just (object [ ( "greeting", JString "hi" ) ])
+        }
+    , CreateSurface { surfaceId = "s", catalogId = "urn:test", components = [], dataModel = Nothing }
     , UpdateComponents { surfaceId = "s", components = [ component "root" "Text" [ ( "text", bound "/greeting" ) ] ] }
     , UpdateDataModel { surfaceId = "s", path = "/greeting", value = JString "hello" }
     , DeleteSurface { surfaceId = "s" }
@@ -72,6 +78,18 @@ wire =
                                     []
                         )
                     |> Expect.equal (Ok [ ( "root", "Text", [ ( "text", JString "hi" ) ] ) ])
+        , test "a message carrying two is refused, not read as the first" <|
+            \_ ->
+                """{"version":"1.0","deleteSurface":{"surfaceId":"s"},"createSurface":{"surfaceId":"t"}}"""
+                    |> Decode.decodeString A2ui.decoder
+                    |> Result.toMaybe
+                    |> Expect.equal Nothing
+        , test "an optional field of the wrong shape is refused, not read as absent" <|
+            \_ ->
+                """{"version":"1.0","createSurface":{"surfaceId":"s","catalogId":7}}"""
+                    |> Decode.decodeString A2ui.decoder
+                    |> Result.toMaybe
+                    |> Expect.equal Nothing
         , test "another version is refused, not read as this one" <|
             \_ ->
                 """{"version":"v0.9","deleteSurface":{"surfaceId":"s"}}"""
@@ -89,7 +107,7 @@ readAfter updates paths =
         reader =
             component "root" "Probe" (List.map (\p -> ( p, bound p )) paths)
     in
-    (CreateSurface { surfaceId = "s", catalogId = "" }
+    (CreateSurface { surfaceId = "s", catalogId = "", components = [], dataModel = Nothing }
         :: UpdateComponents { surfaceId = "s", components = [ reader ] }
         :: List.map (\( path, value ) -> UpdateDataModel { surfaceId = "s", path = path, value = value }) updates
     )
@@ -117,6 +135,22 @@ dataModel =
             \_ ->
                 readAfter [ ( "/a~1b", JString "x" ) ] [ "/a~1b" ]
                     |> Expect.equal (Ok [ Just (JString "x") ])
+        , test "an empty segment is the empty key, not skipped" <|
+            \_ ->
+                readAfter [ ( "/a//b", JString "x" ) ] [ "/a//b", "/a/b" ]
+                    |> Expect.equal (Ok [ Just (JString "x"), Nothing ])
+        , test "a null is written under as if it were not there" <|
+            \_ ->
+                readAfter [ ( "/a", JNull ), ( "/a/b", JString "x" ) ] [ "/a/b" ]
+                    |> Expect.equal (Ok [ Just (JString "x") ])
+        , test "an array is not written at a key, nor past the index after its end" <|
+            \_ ->
+                [ readAfter [ ( "/list", JArray Array.empty ), ( "/list/name", JString "x" ) ] []
+                , readAfter [ ( "/list", JArray Array.empty ), ( "/list/1", JString "x" ) ] []
+                , readAfter [ ( "/text", JString "t" ), ( "/text/a", JString "x" ) ] []
+                ]
+                    |> List.map Result.toMaybe
+                    |> Expect.equal [ Nothing, Nothing, Nothing ]
         ]
 
 
@@ -130,18 +164,27 @@ building =
                     |> Expect.equal Nothing
         , test "a surface with no root is an error" <|
             \_ ->
-                A2ui.surface "s" [ CreateSurface { surfaceId = "s", catalogId = "" } ]
+                A2ui.surface "s" [ CreateSurface { surfaceId = "s", catalogId = "", components = [], dataModel = Nothing } ]
                     |> Result.toMaybe
                     |> Expect.equal Nothing
         , test "another surface's messages are passed over" <|
             \_ ->
                 A2ui.surface "s"
-                    [ CreateSurface { surfaceId = "s", catalogId = "" }
+                    [ CreateSurface { surfaceId = "s", catalogId = "", components = [], dataModel = Nothing }
                     , UpdateComponents { surfaceId = "other", components = [] }
                     , UpdateComponents { surfaceId = "s", components = [ component "root" "Text" [] ] }
                     ]
                     |> Result.map (.components >> Dict.keys)
                     |> Expect.equal (Ok [ "root" ])
+        , test "one createSurface can carry the components and the data they read" <|
+            \_ ->
+                A2ui.surface "inline" messages
+                    |> Result.map
+                        (\s ->
+                            Dict.get "root" s.components
+                                |> Maybe.andThen (\c -> A2ui.read s A2ui.root c "text")
+                        )
+                    |> Expect.equal (Ok (Just (JString "hi")))
         , test "a deleted surface is gone" <|
             \_ ->
                 A2ui.surface "s" messages
@@ -164,7 +207,7 @@ templates =
     in
     test "a template's relative path reads its item, and an absolute one the root" <|
         \_ ->
-            [ CreateSurface { surfaceId = "s", catalogId = "" }
+            [ CreateSurface { surfaceId = "s", catalogId = "", components = [], dataModel = Nothing }
             , UpdateComponents { surfaceId = "s", components = [ list, row ] }
             , UpdateDataModel { surfaceId = "s", path = "/", value = object [ ( "people", people ), ( "title", JString "T" ) ] }
             ]

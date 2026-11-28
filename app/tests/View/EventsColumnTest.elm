@@ -118,7 +118,7 @@ twoPosts catalogId first second =
         item key elapsed =
             JObject (Dict.fromList [ ( "key", JString key ), ( "elapsed", JNumber (toFloat elapsed) ), ( "text", JString "x" ) ])
     in
-    [ CreateSurface { surfaceId = "events", catalogId = catalogId }
+    [ CreateSurface { surfaceId = "events", catalogId = catalogId, components = [], dataModel = Nothing }
     , UpdateComponents
         { surfaceId = "events"
         , components =

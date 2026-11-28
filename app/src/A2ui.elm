@@ -28,9 +28,12 @@ import Json.Encode as Encode
 
 
 {-| What a producer sends. `UpdateDataModel` with `JNull` deletes what stands at `path`, as the spec's `"value": null` does.
+
+`CreateSurface` can carry the surface's first components and data model, which v1.0 lets one message do; the data model is applied before the components are.
+
 -}
 type Message
-    = CreateSurface { surfaceId : String, catalogId : String }
+    = CreateSurface { surfaceId : String, catalogId : String, components : List Component, dataModel : Maybe Value }
     | UpdateComponents { surfaceId : String, components : List Component }
     | UpdateDataModel { surfaceId : String, path : String, value : Value }
     | DeleteSurface { surfaceId : String }
@@ -74,9 +77,17 @@ encode message =
     case message of
         CreateSurface m ->
             envelope "createSurface"
-                [ ( "surfaceId", Encode.string m.surfaceId )
-                , ( "catalogId", Encode.string m.catalogId )
-                ]
+                ([ ( "surfaceId", Encode.string m.surfaceId )
+                 , ( "catalogId", Encode.string m.catalogId )
+                 ]
+                    ++ (if List.isEmpty m.components then
+                            []
+
+                        else
+                            [ ( "components", Encode.list encodeComponent m.components ) ]
+                       )
+                    ++ (m.dataModel |> Maybe.map (\value -> [ ( "dataModel", encodeValue value ) ]) |> Maybe.withDefault [])
+                )
 
         UpdateComponents m ->
             envelope "updateComponents"
@@ -127,22 +138,32 @@ encodeValue value =
             Encode.dict identity encodeValue fields
 
 
-{-| A message of another version, or carrying no message this module knows, fails rather than being skipped: a surface built without it would be a different surface.
+{-| A message of another version, carrying no message this module knows, or carrying more than one, fails rather than being skipped: a surface built without it would be a different surface.
 
 `catalogId` is optional in v1.0; a surface created without one reads as `""`, which no catalog here answers to.
 
 -}
 decoder : Decoder Message
 decoder =
-    Decode.field "version" Decode.string
+    Decode.map2 Tuple.pair
+        (Decode.field "version" Decode.string)
+        (Decode.keyValuePairs Decode.value |> Decode.map List.length)
         |> Decode.andThen
-            (\v ->
-                if v == version then
+            (\( v, keys ) ->
+                if v /= version then
+                    Decode.fail ("A2UI version " ++ v ++ " is not " ++ version)
+
+                else if keys /= 2 then
+                    Decode.fail "a message carries exactly one of createSurface, updateComponents, updateDataModel and deleteSurface"
+
+                else
                     Decode.oneOf
                         [ Decode.field "createSurface" <|
-                            Decode.map2 (\s c -> CreateSurface { surfaceId = s, catalogId = c })
+                            Decode.map4 (\s c cs d -> CreateSurface { surfaceId = s, catalogId = c, components = cs, dataModel = d })
                                 (Decode.field "surfaceId" Decode.string)
-                                (Decode.oneOf [ Decode.field "catalogId" Decode.string, Decode.succeed "" ])
+                                (optionalField "catalogId" Decode.string |> Decode.map (Maybe.withDefault ""))
+                                (optionalField "components" (Decode.list componentDecoder) |> Decode.map (Maybe.withDefault []))
+                                (optionalField "dataModel" valueDecoder)
                         , Decode.field "updateComponents" <|
                             Decode.map2 (\s cs -> UpdateComponents { surfaceId = s, components = cs })
                                 (Decode.field "surfaceId" Decode.string)
@@ -150,15 +171,27 @@ decoder =
                         , Decode.field "updateDataModel" <|
                             Decode.map3 (\s p val -> UpdateDataModel { surfaceId = s, path = p, value = val })
                                 (Decode.field "surfaceId" Decode.string)
-                                (Decode.oneOf [ Decode.field "path" Decode.string, Decode.succeed "/" ])
+                                (optionalField "path" Decode.string |> Decode.map (Maybe.withDefault "/"))
                                 (Decode.field "value" valueDecoder)
                         , Decode.field "deleteSurface" <|
                             Decode.map (\s -> DeleteSurface { surfaceId = s })
                                 (Decode.field "surfaceId" Decode.string)
                         ]
+            )
+
+
+{-| A field that may be absent; one that is there and of the wrong shape fails, where `Decode.maybe` would read it as absent.
+-}
+optionalField : String -> Decoder a -> Decoder (Maybe a)
+optionalField name fieldDecoder =
+    Decode.keyValuePairs Decode.value
+        |> Decode.andThen
+            (\fields ->
+                if List.any (Tuple.first >> (==) name) fields then
+                    Decode.field name fieldDecoder |> Decode.map Just
 
                 else
-                    Decode.fail ("A2UI version " ++ v ++ " is not " ++ version)
+                    Decode.succeed Nothing
             )
 
 
@@ -200,7 +233,7 @@ type alias Surface =
 
 {-| The surface `surfaceId` names, built by applying the messages in order; the messages for other surfaces are passed over.
 
-A surface updated before it is created, created twice, or left without a `root` is an error, and so is one deleted and not created again.
+A surface updated before it is created, created twice, or left without a `root` is an error, and so is one deleted and not created again, and a write the data model cannot take.
 
 -}
 surface : String -> List Message -> Result String Surface
@@ -231,10 +264,13 @@ apply surfaceId message current =
             else
                 case current of
                     Just s ->
-                        Ok (Just (f s))
+                        Result.map Just (f s)
 
                     Nothing ->
                         Err ("surface " ++ id ++ " was updated before it was created")
+
+        withComponents components s =
+            { s | components = List.foldl (\c -> Dict.insert c.id c) s.components components }
     in
     case message of
         CreateSurface m ->
@@ -245,15 +281,27 @@ apply surfaceId message current =
                 Err ("surface " ++ m.surfaceId ++ " was created twice")
 
             else
-                Ok (Just { surfaceId = m.surfaceId, catalogId = m.catalogId, components = Dict.empty, dataModel = JObject Dict.empty })
+                Ok
+                    (Just
+                        (withComponents m.components
+                            { surfaceId = m.surfaceId
+                            , catalogId = m.catalogId
+                            , components = Dict.empty
+                            , dataModel = Maybe.withDefault (JObject Dict.empty) m.dataModel
+                            }
+                        )
+                    )
 
         UpdateComponents m ->
-            existing m.surfaceId
-                (\s -> { s | components = List.foldl (\c -> Dict.insert c.id c) s.components m.components })
+            existing m.surfaceId (withComponents m.components >> Ok)
 
         UpdateDataModel m ->
             existing m.surfaceId
-                (\s -> { s | dataModel = setAt (pointer m.path) m.value s.dataModel })
+                (\s ->
+                    setAt (pointer m.path) m.value s.dataModel
+                        |> Result.map (\dataModel -> { s | dataModel = dataModel })
+                        |> Result.mapError (\problem -> "updateDataModel " ++ m.path ++ ": " ++ problem)
+                )
 
         DeleteSurface m ->
             if m.surfaceId == surfaceId then
@@ -267,14 +315,22 @@ apply surfaceId message current =
 -- POINTERS
 
 
-{-| RFC 6901, except that `/` alone is the root, as A2UI's default path is.
+{-| RFC 6901, except that `/` alone is the root, as A2UI's default path is. A path without the leading `/` is the relative one a template's item reads against, and is split the same way.
 -}
 pointer : String -> List String
 pointer path =
-    path
-        |> String.split "/"
-        |> List.filter (not << String.isEmpty)
-        |> List.map (String.replace "~1" "/" >> String.replace "~0" "~")
+    if path == "" || path == "/" then
+        []
+
+    else
+        (if String.startsWith "/" path then
+            String.dropLeft 1 path
+
+         else
+            path
+        )
+            |> String.split "/"
+            |> List.map (String.replace "~1" "/" >> String.replace "~0" "~")
 
 
 getAt : List String -> Value -> Maybe Value
@@ -297,53 +353,63 @@ getAt segments value =
                     Nothing
 
 
-{-| What stands at the pointer is replaced, and what leads to it is made where it is missing. `JNull` removes the key; at an array's index it leaves a null, which keeps the indices after it.
+{-| What stands at the pointer is replaced, and objects are made where what leads to it is missing or null.
+`JNull` removes an object's key; at an array's index it leaves a null, which keeps the indices after it.
+An array is written at an index it holds or the one past its end, which appends; any other segment, and any segment into a string, number or boolean, is an error.
 -}
-setAt : List String -> Value -> Value -> Value
+setAt : List String -> Value -> Value -> Result String Value
 setAt segments new value =
-    case segments of
-        [] ->
-            if new == JNull then
-                JObject Dict.empty
+    case ( segments, value ) of
+        ( [], _ ) ->
+            Ok
+                (if new == JNull then
+                    JObject Dict.empty
 
-            else
-                new
+                 else
+                    new
+                )
 
-        [ segment ] ->
-            if new == JNull then
-                case value of
-                    JObject fields ->
-                        JObject (Dict.remove segment fields)
+        ( segment :: rest, JObject fields ) ->
+            setInObject segment rest new fields
 
-                    _ ->
-                        setIn segment new value
+        ( segment :: rest, JArray elements ) ->
+            String.toInt segment
+                |> Result.fromMaybe ("an array has no index " ++ segment)
+                |> Result.andThen (\i -> setInArray i rest new elements)
 
-            else
-                setIn segment new value
+        ( _, JNull ) ->
+            setAt segments new (JObject Dict.empty)
 
-        segment :: rest ->
-            let
-                inner =
-                    getAt [ segment ] value |> Maybe.withDefault (JObject Dict.empty)
-            in
-            setIn segment (setAt rest new inner) value
+        ( segment :: _, _ ) ->
+            Err ("nothing can be written under " ++ segment ++ " into a value that is neither an object nor an array")
 
 
-setIn : String -> Value -> Value -> Value
-setIn segment new value =
-    case ( value, String.toInt segment ) of
-        ( JArray elements, Just i ) ->
+setInObject : String -> List String -> Value -> Dict String Value -> Result String Value
+setInObject segment rest new fields =
+    if rest == [] && new == JNull then
+        Ok (JObject (Dict.remove segment fields))
+
+    else
+        Dict.get segment fields
+            |> Maybe.withDefault (JObject Dict.empty)
+            |> setAt rest new
+            |> Result.map (\inner -> JObject (Dict.insert segment inner fields))
+
+
+setInArray : Int -> List String -> Value -> Array Value -> Result String Value
+setInArray i rest new elements =
+    case Array.get i elements of
+        Just element ->
+            setAt rest new element
+                |> Result.map (\inner -> JArray (Array.set i inner elements))
+
+        Nothing ->
             if i == Array.length elements then
-                JArray (Array.push new elements)
+                setAt rest new (JObject Dict.empty)
+                    |> Result.map (\inner -> JArray (Array.push inner elements))
 
             else
-                JArray (Array.set i new elements)
-
-        ( JObject fields, _ ) ->
-            JObject (Dict.insert segment new fields)
-
-        _ ->
-            JObject (Dict.singleton segment new)
+                Err ("index " ++ String.fromInt i ++ " is past the end of an array of " ++ String.fromInt (Array.length elements))
 
 
 
