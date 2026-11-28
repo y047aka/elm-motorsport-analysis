@@ -1,33 +1,29 @@
-module View.EventsColumn exposing (Model, Surface, init, surfaceOf, view)
+module View.EventsColumn exposing (Model, init, view)
 
 {-| The round's events as a column of the strip: what has happened by the race
 clock, newest first, one post per event.
 
-The feed -- the frame, the posts, their paging -- is `View.Feed`. The posts arrive as an A2UI surface: `View.EventsColumn.Agent` says the race's timeline in its messages, `View.EventsColumn.Catalog` reads them back, and what is here draws what the catalog read.
+The feed -- the frame, the posts, their paging -- is `View.Feed`. The posts arrive as an A2UI surface, `EventsFeed`'s; what is here is the renderer of its catalog, `EventsFeed.Catalog`.
 
 The visual tests locate the column by `data-events-column`.
 
 -}
 
-import A2ui
 import Array
 import Dict exposing (Dict)
+import EventsFeed exposing (Surface)
+import EventsFeed.Catalog as Catalog
 import Html exposing (Html, div, span, text)
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Lazy
-import Json.Decode as Decode
-import Json.Encode as Encode
 import Motorsport.Duration as Duration
 import Motorsport.Flag exposing (Flag(..))
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap.Performance as Performance
 import Motorsport.Lap.SegmentStrip as SegmentStrip
 import Motorsport.Race.Car exposing (Car)
-import Motorsport.Race.Timeline exposing (Timeline)
 import View.CarNumberBadge as CarNumberBadge
 import View.ClassMark as ClassMark
-import View.EventsColumn.Agent as Agent
-import View.EventsColumn.Catalog as Catalog
 import View.Feed as Feed
 
 
@@ -38,28 +34,6 @@ type alias Model =
 init : Model
 init =
     Feed.init { perPage = 30 }
-
-
-{-| The surface the column draws, or why it could not be read.
--}
-type alias Surface =
-    Result String Catalog.Feed
-
-
-{-| The agent's messages, sent over the wire and read back as a renderer would read them: through JSON and the decoder, not handed across as Elm values.
-
-It is built once per round, not per frame: the surface holds the whole race, and the clock is applied to it where it is drawn.
-
--}
-surfaceOf : List Car -> Timeline -> Surface
-surfaceOf cars timeline =
-    Agent.messages cars timeline
-        |> Encode.list A2ui.encode
-        |> Encode.encode 0
-        |> Decode.decodeString (Decode.list A2ui.decoder)
-        |> Result.mapError Decode.errorToString
-        |> Result.andThen (A2ui.surface Agent.surfaceId)
-        |> Result.andThen Catalog.fromSurface
 
 
 {-| The column, and the corner it is held and closed by.

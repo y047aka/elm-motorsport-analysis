@@ -1,4 +1,4 @@
-module View.EventsColumn.Agent exposing (surfaceId, messages)
+module EventsFeed.Agent exposing (surfaceId, messages)
 
 {-| The events column's surface, said in A2UI messages: the side of the protocol a remote agent would speak, run here in the app over the round's own timeline.
 
@@ -13,6 +13,7 @@ Which events are posted, what each is called and which flag colours race control
 import A2ui exposing (Message, Value(..))
 import Array
 import Dict exposing (Dict)
+import EventsFeed.Catalog as Catalog
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration
 import Motorsport.Flag exposing (Flag(..))
@@ -23,7 +24,6 @@ import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Sector as Sector
-import View.EventsColumn.Catalog as Catalog
 
 
 surfaceId : String

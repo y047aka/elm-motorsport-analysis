@@ -18,6 +18,7 @@ import Data.Wec.CarImage as CarImage exposing (CarImages)
 import Data.Wec.Laps as WecLaps
 import Dict exposing (Dict)
 import Effect exposing (Effect)
+import EventsFeed
 import Generated.Manufacturer.Wec
 import Http
 import Json.Decode as Decode exposing (Decoder)
@@ -48,7 +49,6 @@ import Motorsport.Wec.Circuit.Spa.Layout as SpaLayout
 import Motorsport.Wec.Era as Era
 import Shared.Msg exposing (Drawing, Msg(..))
 import Task exposing (Task)
-import View.EventsColumn as EventsColumn
 
 
 
@@ -171,7 +171,7 @@ type alias LoadedRound =
     , energy : Energy.Table
     , track : Tracker.Track
     , timeline : Timeline
-    , eventsSurface : EventsColumn.Surface
+    , eventsSurface : EventsFeed.Surface
     }
 
 
@@ -500,7 +500,7 @@ timelineArrived key events round =
                 Loaded id
                     { loaded
                         | timeline = timeline
-                        , eventsSurface = EventsColumn.surfaceOf loaded.replay.race.cars timeline
+                        , eventsSurface = EventsFeed.surfaceOf loaded.replay.race.cars timeline
                     }
 
             else
@@ -556,7 +556,7 @@ roundFrom summary rawLaps timelineEvents drawing =
     , energy = energy
     , track = trackOf summary.track drawing
     , timeline = timeline
-    , eventsSurface = EventsColumn.surfaceOf replay.race.cars timeline
+    , eventsSurface = EventsFeed.surfaceOf replay.race.cars timeline
     }
 
 

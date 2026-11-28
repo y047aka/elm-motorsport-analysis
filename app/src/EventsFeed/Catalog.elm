@@ -1,4 +1,4 @@
-module View.EventsColumn.Catalog exposing
+module EventsFeed.Catalog exposing
     ( catalogId
     , Feed, Post, Avatar(..), Body, FastestLap, Segments(..), Rating
     , fromSurface, countUpTo

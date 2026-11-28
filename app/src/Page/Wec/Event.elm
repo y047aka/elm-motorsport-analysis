@@ -13,6 +13,7 @@ import Dict exposing (Dict)
 import Drag
 import Drag.Handle as Handle
 import Effect exposing (Effect)
+import EventsFeed
 import Html exposing (Html, a, button, div, main_, nav, span, text)
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (onClick)
@@ -439,7 +440,7 @@ stripColumn key width placement content =
     )
 
 
-columnStrip : String -> TrackerChart.Track -> Timeline -> EventsColumn.Surface -> List Columns.StripKey -> Model -> Dict String PitCycle -> Replay.Model -> Snapshot -> Html Msg
+columnStrip : String -> TrackerChart.Track -> Timeline -> EventsFeed.Surface -> List Columns.StripKey -> Model -> Dict String PitCycle -> Replay.Model -> Snapshot -> Html Msg
 columnStrip cell track timeline eventsSurface keys m pitCycles replay snapshot =
     let
         several =

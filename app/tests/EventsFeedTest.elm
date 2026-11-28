@@ -1,8 +1,10 @@
-module View.EventsColumnTest exposing (suite)
+module EventsFeedTest exposing (suite)
 
 import A2ui exposing (Message(..), Value(..))
 import Array
 import Dict
+import EventsFeed
+import EventsFeed.Catalog as Catalog exposing (Avatar(..), Segments(..))
 import Expect
 import Motorsport.Flag exposing (Flag(..))
 import Motorsport.Instant as Instant
@@ -11,8 +13,6 @@ import Motorsport.Race.Timeline as Timeline exposing (Timeline)
 import Motorsport.Race.TimelineEvent as TimelineEvent
 import Motorsport.Sector as Sector
 import Test exposing (Test, describe, test)
-import View.EventsColumn as EventsColumn
-import View.EventsColumn.Catalog as Catalog exposing (Avatar(..), Segments(..))
 
 
 {-| Lines of the kept COTA timeline, so the surface is said over what the round itself serves.
@@ -32,7 +32,7 @@ cota =
 
 suite : Test
 suite =
-    describe "View.EventsColumn"
+    describe "EventsFeed"
         [ surface
         , refusals
         ]
@@ -42,7 +42,7 @@ surface : Test
 surface =
     let
         feed =
-            EventsColumn.surfaceOf [] cota
+            EventsFeed.surfaceOf [] cota
     in
     describe "the agent's surface, read back by the catalog"
         [ test "one post per event, keyed by its place in the timeline" <|
