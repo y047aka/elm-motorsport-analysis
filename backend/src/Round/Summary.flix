@@ -15,7 +15,6 @@ pub mod Round.Summary {
     use Sql.Sel
     use Motorsport.Calendar.Entry
     use Motorsport.Car.Car
-    use Motorsport.Events
     use Motorsport.Metadata
     use Motorsport.Metadata.CarBuild
     use Motorsport.MiniSector
@@ -159,7 +158,7 @@ pub mod Round.Summary {
                         Some(id -> Map.get(MiniSector.positionOf(id), mini))
                     else
                         None;
-                Track.fromFastest(Events.circuit(entry#id), sectorTime, miniSectorTime)
+                Track.fromFastest(entry#circuit, sectorTime, miniSectorTime)
         }
 
     def fastestSectors(entry: Entry): (Option[Duration], Option[Duration], Option[Duration], Bool) \ DbRead + RawSql =

@@ -14,7 +14,13 @@ pub mod Round.TestRender {
     use Motorsport.Wec
     use Motorsport.Wec.RawLap
 
-    def leMans(): Entry = { season = 2025, id = "le_mans_24h", date = "2025-06-14" }
+    def leMans(): Entry = {
+        season  = 2025,
+        id      = "le_mans_24h",
+        date    = "2025-06-14",
+        name    = "24 Hours of Le Mans",
+        circuit = Some(Motorsport.Circuit.Circuit.LeMans)
+    }
 
     def header(): String =
         "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER;FLAG_AT_FL;S1_SECONDS;S2_SECONDS;S3_SECONDS"

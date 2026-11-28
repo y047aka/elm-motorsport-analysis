@@ -27,7 +27,7 @@ pub mod Motorsport.Track {
     /// The whole lap, divided.
     ///
     /// `circuit` is the one thing here not read off the laps, which say nothing
-    /// about it -- see `Motorsport.Events.circuit`. It is which ground the round
+    /// about it -- the calendar file's `circuit`. It is which ground the round
     /// was run on, which is what the drawing of it is chosen by. Which way
     /// round the drawing runs is the drawing's own affair: a drawn circuit
     /// carries it in its geometry, and the ring has no geometry to ask and runs

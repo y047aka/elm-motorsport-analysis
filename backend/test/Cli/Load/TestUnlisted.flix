@@ -2,8 +2,9 @@ pub mod Cli.Load.TestUnlisted {
 
     use Cli.FileTask
     use Cli.Load.Unlisted
+    use Motorsport.TestCalendarSupport
 
-    def tasks(root: String): List[FileTask.Input] = FileTask.inputs(root)
+    def tasks(root: String): List[FileTask.Input] = FileTask.inputs(TestCalendarSupport.calendar(), root)
 
     /// A CSV every run is expected to find, spelled the way the walk returns it.
     def listedCsv(): String = "../data/wec/2025/spa_6h.csv"

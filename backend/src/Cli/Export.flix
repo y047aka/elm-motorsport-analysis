@@ -38,11 +38,11 @@ pub mod Cli.Export {
     /// Not where the files are written to. That is the run's `--out`, and
     /// `../app/static/wec` and `/static/wec` are the same place reached two
     /// different ways.
-    pub def urlRoot(): String =
-        "/static/${Calendar.series()}"
+    pub def urlRoot(calendar: Calendar.Calendar): String =
+        "/static/${Calendar.series(calendar)}"
 
-    pub def runAll(root: String, rounds: FileTask.Rounds): Int32 \ {IO, Console, SqlRead, RawSql} =
-        let tasks = FileTask.outputs(root, rounds);
+    pub def runAll(calendar: Motorsport.Calendar.Calendar, root: String, rounds: FileTask.Rounds): Int32 \ {IO, Console, SqlRead, RawSql} =
+        let tasks = FileTask.outputs(calendar, root, rounds);
         let summary = List.foldLeft(
             (acc, task) -> match exportRound(task) {
                 case Ok(rendered) =>
@@ -58,7 +58,7 @@ pub mod Cli.Export {
             { exported = 0, errors = 0 },
             tasks
         );
-        let calendarErrors = writeCalendar(root);
+        let calendarErrors = writeCalendar(calendar, root);
         let errors = summary#errors + calendarErrors;
         Console.println("Export completed: ${summary#exported} exported, ${errors} errors");
         if (errors == 0) 0 else 1
@@ -119,9 +119,9 @@ pub mod Cli.Export {
     ///
     /// Every round, whatever the run was asked to write: this is the list of
     /// what there is, not of what was written.
-    def writeCalendar(root: String): Int32 \ {IO, Console} =
+    def writeCalendar(calendar: Calendar.Calendar, root: String): Int32 \ {IO, Console} =
         let path = "${root}/index.json";
-        match Files.write(path, Extra.render(Manifest.toJson(urlRoot(), Calendar.seasons()))) {
+        match Files.write(path, Extra.render(Manifest.toJson(urlRoot(calendar), calendar#seasons))) {
             case Ok(_) =>
                 Console.println("Calendar -> ${path}");
                 0

@@ -16,12 +16,23 @@ pub mod Round.TestTrack {
     use Util.Duration
     use Util.HourClock.Hour
 
-    /// Rounds whose ids the tests fall back on; written out rather than looked
-    /// up, so a change to the real calendar cannot quietly rewrite what a test
-    /// asserts.
-    def spa(): Entry = { season = 2025, id = "spa_6h", date = "2025-05-09" }
+    /// The rounds these tests convert. Written out rather than looked up, so a
+    /// change to the calendar cannot quietly rewrite what a test asserts.
+    def spa(): Entry = {
+        season  = 2025,
+        id      = "spa_6h",
+        date    = "2025-05-09",
+        name    = "6 Hours of Spa",
+        circuit = Some(Circuit.Spa)
+    }
 
-    def unknownCircuit(): Entry = { season = 2025, id = "custom_event", date = "2025-01-01" }
+    def unknownCircuit(): Entry = {
+        season  = 2025,
+        id      = "custom_event",
+        date    = "2025-01-01",
+        name    = "custom_event",
+        circuit = None
+    }
 
     def track(entry: Entry, laps: List[RawLap]): Track.Track \ IO =
         TestSupport.onRound(entry, numbered(laps), () ->
@@ -162,12 +173,15 @@ pub mod Round.TestTrack {
         let json = OrderedJson.toPrettyString(2, Track.toJson(track(spa(), laps)));
         Assert.assertTrue(not String.contains({substr = "\"miniSectors\""}, json))
 
-    /// The summary's circuit comes off the round's id; which way round the
-    /// drawing of it runs is the geometry's own business.
+    /// The circuit the drawing is chosen by comes off the entry, not the laps;
+    /// which way round the drawing of it runs is the geometry's own business.
     @Test
     def testTheCircuitComesOffTheRoundId(): Unit \ {Assert, IO} =
         let laps = mkLap(15000, Some(5000), Some(5000), Some(5000)) :: Nil;
-        let cota = track({ season = 2025, id = "cota_6h", date = "2025-09-07" }, laps);
+        let cota = track(
+            { season = 2025, id = "cota_6h", date = "2025-09-07", name = "Lone Star Le Mans", circuit = Some(Circuit.Cota) },
+            laps
+        );
         Assert.assertTrue(cota#circuit == Some(Circuit.Cota));
         let unnamed = track(unknownCircuit(), laps);
         Assert.assertTrue(Option.isEmpty(unnamed#circuit))

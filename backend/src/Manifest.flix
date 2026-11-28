@@ -7,7 +7,6 @@ pub mod Manifest {
     use oj::OrderedJson.Json.{JObject, JString, JNumber, JArray}
     use Motorsport.Calendar.Round
     use Motorsport.Calendar.Season
-    use Motorsport.Events
 
     /// The paths are stated rather than left to a rule the reader reproduces. A
     /// convention both sides know is two copies of it, and the app has no way to
@@ -30,7 +29,7 @@ pub mod Manifest {
             let stem = "${urlRoot}/${season}/${r#id}";
             JObject(
                 ("id",       JString(r#id)) ::
-                ("name",     JString(Events.displayName(r#id))) ::
+                ("name",     JString(r#name)) ::
                 ("date",     JString(r#date)) ::
                 ("summary",  JString("${stem}.json")) ::
                 ("laps",     JString("${stem}_laps.jsonl")) ::

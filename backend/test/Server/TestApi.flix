@@ -14,47 +14,58 @@ pub mod Server.TestApi {
     use Motorsport.Metadata
     use Round.TestSupport
     use Db.TestLapRow
+    use Motorsport.Calendar.Calendar
     use Motorsport.Calendar.Entry
+    use Motorsport.TestCalendarSupport
     use Motorsport.Wec
     use Motorsport.Wec.RawLap
     use Util.Json.Extra
 
-    def fuji(): Entry = { season = 2025, id = "fuji_6h", date = "2025-09-28" }
+    def calendar(): Calendar =
+        TestCalendarSupport.calendar()
+
+    def fuji(): Entry = {
+        season  = 2025,
+        id      = "fuji_6h",
+        date    = "2025-09-28",
+        name    = "6 Hours of Fuji",
+        circuit = Some(Motorsport.Circuit.Circuit.Fuji)
+    }
 
     /// Answered with nothing behind it, which is how `Server` answers a route that reads nothing.
     def offline(route: Route): Response =
-        RawSql.runWithAllow(() -> DbTest.runWithRows(Nil, () -> Api.respond(route)))
+        RawSql.runWithAllow(() -> DbTest.runWithRows(Nil, () -> Api.respond(calendar(), route)))
 
     @Test
     def theHealthPathIsItsOwnRoute(): Unit \ Assert =
-        Assert.assertTrue(Api.route("/api/health") == Route.Health)
+        Assert.assertTrue(Api.route(calendar(), "/api/health") == Route.Health)
 
     @Test
     def aRoundIsNamedAsTheExportNamesItsFiles(): Unit \ Assert =
-        Assert.assertTrue(Api.route("/api/wec/2025/fuji_6h.json") == Route.Summary(2025, "fuji_6h"));
-        Assert.assertTrue(Api.route("/api/wec/2025/fuji_6h_laps.jsonl") == Route.Laps(2025, "fuji_6h"))
+        Assert.assertTrue(Api.route(calendar(), "/api/wec/2025/fuji_6h.json") == Route.Summary(2025, "fuji_6h"));
+        Assert.assertTrue(Api.route(calendar(), "/api/wec/2025/fuji_6h_laps.jsonl") == Route.Laps(2025, "fuji_6h"))
 
     /// The calendar is what says a round exists, so a path naming one it does
     /// not list is no route at all.
     @Test
     def anUnlistedRoundIsNotFound(): Unit \ Assert =
-        Assert.assertTrue(Api.route("/api/wec/2025/monza_6h.json") == Route.NotFound);
-        Assert.assertTrue(Api.route("/api/wec/1999/fuji_6h.json") == Route.NotFound);
-        Assert.assertTrue(Api.route("/api/wec/latest/fuji_6h.json") == Route.NotFound)
+        Assert.assertTrue(Api.route(calendar(), "/api/wec/2025/monza_6h.json") == Route.NotFound);
+        Assert.assertTrue(Api.route(calendar(), "/api/wec/1999/fuji_6h.json") == Route.NotFound);
+        Assert.assertTrue(Api.route(calendar(), "/api/wec/latest/fuji_6h.json") == Route.NotFound)
 
     @Test
     def anythingElseIsNotFound(): Unit \ Assert =
-        Assert.assertTrue(Api.route("/api/wec/2025/fuji_6h") == Route.NotFound);
-        Assert.assertTrue(Api.route("/api/wec") == Route.NotFound);
-        Assert.assertTrue(Api.route("/static/wec/index.json") == Route.NotFound)
+        Assert.assertTrue(Api.route(calendar(), "/api/wec/2025/fuji_6h") == Route.NotFound);
+        Assert.assertTrue(Api.route(calendar(), "/api/wec") == Route.NotFound);
+        Assert.assertTrue(Api.route(calendar(), "/static/wec/index.json") == Route.NotFound)
 
     /// The series segment admits one championship and answers every other word
     /// the same way no round does.
     @Test
     def anUnknownSeriesIsNotFound(): Unit \ Assert =
-        Assert.assertTrue(Api.route("/api/f1/index.json") == Route.NotFound);
-        Assert.assertTrue(Api.route("/api/f1/2025/fuji_6h.json") == Route.NotFound);
-        Assert.assertTrue(Api.route("/api/WEC/2025/fuji_6h.json") == Route.NotFound)
+        Assert.assertTrue(Api.route(calendar(), "/api/f1/index.json") == Route.NotFound);
+        Assert.assertTrue(Api.route(calendar(), "/api/f1/2025/fuji_6h.json") == Route.NotFound);
+        Assert.assertTrue(Api.route(calendar(), "/api/WEC/2025/fuji_6h.json") == Route.NotFound)
 
     /// A database that is down is not a reason to be unable to list the
     /// rounds: the calendar is written down, not counted out of the rows.
@@ -69,7 +80,7 @@ pub mod Server.TestApi {
     /// A database that answers, and answers with a failure. `offline` is the
     /// other kind -- nothing behind the request at all.
     def failing(error: DbErrorKind, route: Route): Response =
-        RawSql.runWithAllow(() -> run { Api.respond(route) } with handler SqlRead {
+        RawSql.runWithAllow(() -> run { Api.respond(calendar(), route) } with handler SqlRead {
             def fetch(_sql, _params, resume) = resume(Err(error))
         })
 
@@ -114,9 +125,9 @@ pub mod Server.TestApi {
     @Test
     def theTwoRootsNameTheSameRounds(): Unit \ Assert =
         let served = offline(Route.Calendar)#body;
-        let exported = Extra.render(Manifest.toJson(Cli.Export.urlRoot(), Motorsport.Calendar.seasons()));
+        let exported = Extra.render(Manifest.toJson(Cli.Export.urlRoot(calendar()), calendar()#seasons));
         Assert.assertTrue(
-            String.replace({src = Api.urlRoot()}, {dst = Cli.Export.urlRoot()}, served) == exported
+            String.replace({src = Api.urlRoot(calendar())}, {dst = Cli.Export.urlRoot(calendar())}, served) == exported
         )
 
     /// The calendar the server hands out points back at the server.
@@ -155,9 +166,9 @@ pub mod Server.TestApi {
     ) \ IO =
         TestSupport.onRound(fuji(), laps, () -> (
             {
-                summary  = Api.respond(Route.Summary(2025, "fuji_6h")),
-                laps     = Api.respond(Route.Laps(2025, "fuji_6h")),
-                timeline = Api.respond(Route.Timeline(2025, "fuji_6h"))
+                summary  = Api.respond(calendar(), Route.Summary(2025, "fuji_6h")),
+                laps     = Api.respond(calendar(), Route.Laps(2025, "fuji_6h")),
+                timeline = Api.respond(calendar(), Route.Timeline(2025, "fuji_6h"))
             },
             {
                 summary  = Render.renderSummary(
@@ -184,8 +195,8 @@ pub mod Server.TestApi {
 
     def unloaded(): (Response, Response) \ IO =
         TestSupport.onRound(fuji(), TestLapRow.sampleLaps(), () -> (
-            Api.respond(Route.Summary(2025, "imola_6h")),
-            Api.respond(Route.Laps(2025, "imola_6h"))
+            Api.respond(calendar(), Route.Summary(2025, "imola_6h")),
+            Api.respond(calendar(), Route.Laps(2025, "imola_6h"))
         ))
 
 }

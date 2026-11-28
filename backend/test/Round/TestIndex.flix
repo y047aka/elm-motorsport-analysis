@@ -13,7 +13,7 @@ pub mod Round.TestIndex {
     use Motorsport.Wec
     use Motorsport.Wec.RawLap
 
-    def entry(): Entry = { season = 2025, id = "test", date = "2025-01-01" }
+    def entry(): Entry = { season = 2025, id = "test", date = "2025-01-01", name = "test", circuit = None }
 
     def indexOf(laps: List[RawLap]): Motorsport.Index.Index \ IO =
         TestSupport.onRound(entry(), laps, () -> Index.read(entry(), Round.Drivers.read(entry())))

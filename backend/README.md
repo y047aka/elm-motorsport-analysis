@@ -15,7 +15,7 @@ Requests are answered on a pool of eight, and each opens a connection of its own
 An answer reads only what it is made of, rather than reading a round's laps to throw them away.
 The timeline's answer reads `Round.Index` too and walks every lap, and `Server.flix` computes the `ETag` off the rendered bytes, so even a request that comes back 304 pays for the walk.
 
-A route that reads nothing is answered before connecting at all, under `Sqlitefx.DbTest.runWithRows`: the calendar is `Motorsport.Calendar` rather than a count of the rows, so a database that is down stops a round being opened and not the app being used.
+A route that reads nothing is answered before connecting at all, under `Sqlitefx.DbTest.runWithRows`: the calendar is `data/wec/calendar.json` read at startup rather than a count of the rows, so a database that is down stops a round being opened and not the app being used.
 
 A 200 carries a CRC32 `ETag` that a reload revalidates into a 304, and a body goes out gzipped where the request accepts it — Le Mans's laps are 25MB, and 3.4MB on the wire.
 
@@ -91,7 +91,7 @@ It also fixes the order events sharing an instant come back in: `List.sortBy` is
 
 ## Two stages, one database, and the jar
 
-`Cli` runs in two stages: the load reads each round's CSV — of every round `Motorsport.Calendar` lists, under `--csv` — and rebuilds every table off it, and the export writes out of the rows alone, under `--out`, a round's summary `.json`, its laps `_laps.jsonl` one lap per line, its timeline `_timeline.jsonl` one event per line, and `index.json` beside them, in the same season directories.
+`Cli` runs in two stages: the load reads each round's CSV — of every round `data/wec/calendar.json` lists, under `--csv` — and rebuilds every table off it, and the export writes out of the rows alone, under `--out`, a round's summary `.json`, its laps `_laps.jsonl` one lap per line, its timeline `_timeline.jsonl` one event per line, and `index.json` beside them, in the same season directories.
 `--load` and `--export` are those stages singly, and `--export-only <season>/<id>` narrows the writing stage alone, repeated to name more than one; a name no round on the calendar answers to fails the run before anything is written.
 
 The writing stage reads no CSV: the files are an image of the rows, a row corrected in SQL is exported, and re-exporting after a renderer change costs no decoding.

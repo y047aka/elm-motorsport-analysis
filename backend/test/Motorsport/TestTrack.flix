@@ -89,7 +89,7 @@ pub mod Motorsport.TestTrack {
         let json = OrderedJson.toPrettyString(2, Track.toJson(track));
         Assert.assertTrue(String.contains({substr = "\"circuit\": \"cota\""}, json))
 
-    /// A round `Motorsport.Events` has never been told about states no circuit.
+    /// A round the calendar names no circuit for states no circuit.
     @Test
     def aRoundOfUnknownCircuitStatesNone(): Unit \ Assert =
         let track = Track.fromFastest(

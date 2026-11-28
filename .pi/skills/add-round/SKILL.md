@@ -13,7 +13,7 @@ Nothing downstream can derive the year — the feed's `HOUR` column is a time of
 
 ## 0. Name the round
 
-A round id is `<circuit stem>_<duration>`: `fuji_6h`, `bahrain_8h`, `qatar_1812km`. The stem is the circuit's word (`bahrain_8h` and a future `bahrain_1812km` are both `bahrain`), and the suffixes are not a grammar — that is why `Events.circuit` matches whole ids rather than cutting them.
+A round id is `<circuit stem>_<duration>`: `fuji_6h`, `bahrain_8h`, `qatar_1812km`. The stem is the circuit's word (`bahrain_8h` and a future `bahrain_1812km` are both `bahrain`), and the suffixes are not a grammar.
 
 If the circuit is new — its word is not in `Motorsport.Circuit`'s enum, or no geometry is served for it — the circuit joins upstream in `github:y047aka/circuit-maps-3d` first (its `docs/adding-a-circuit.md` holds the steps), and its geometry arrives here when the flake input next moves; come back after.
 
@@ -23,12 +23,9 @@ Put it at `data/wec/<season>/<id>.csv`. The name must answer to the calendar id 
 
 The feed is `;`-separated with a BOM'd header row — compare against a kept file (`data/wec/2025/cota_6h.csv`) before loading; a differently-spelled publisher's export is a decoding failure, not a round with odd data.
 
-## 2. Register the round in code
+## 2. Register the round in the calendar
 
-- `backend/src/Motorsport/Calendar.flix` — add `{ id, date }` to its season's `rounds`, **in the order the season ran them**; a new year is a new `Season` at the front of `seasons()` (newest first is the whole of what makes a season current). A season opens when it has data.
-- `backend/src/Motorsport/Events.flix` — two cases:
-  - `displayName` — the prose name (`"6 Hours of Fuji"`). `TestEvents` fails any calendar id that answers as its own id.
-  - `circuit` — `Some(Circuit.<Case>)`. `TestEvents` fails any calendar round naming no circuit; the drawing decides what to draw it with, this must simply answer.
+- `data/wec/calendar.json` — add the round to its season's `rounds`, **in the order the season ran them**; a new year is a new season at the front of `seasons` (newest first is the whole of what makes a season current). A season opens when it has data. The keys are `id`, `date` (`YYYY-MM-DD` — validated by the read), `name` (the prose name, `"6 Hours of Fuji"`) and `circuit` (the circuit's word, which must be a case of `Motorsport.Circuit` — an unknown word fails the read), and a duplicate id fails it too.
 - A genuinely new class grid (a category added, dropped, or moved in order) is `package/src/Motorsport/Wec/Era.elm` and `Class.elm`'s `grid` — the only place an era is spent. A class name the era's grid does not list is not an error: the car reads as `none`.
 
 ## 3. Load and export
@@ -78,7 +75,7 @@ If a change grew the summary with a key the drawing chooses by, re-export the ke
 
 | Command | What it catches |
 | --- | --- |
-| `nix run .#flix-build && nix run .#flix-test` | the calendar's whole worklist: `TestEvents` reads ids off `Calendar` and fails a round registered in one file and not the other |
+| `nix run .#flix-build && nix run .#flix-test` | the calendar file reads cleanly: `TestCalendarFile` fails a date that is no date, a circuit word nobody knows, and a duplicate id |
 | `nix run .#cli-run` | the round loads and exports with the rest; the integrity checks answer out of the rows |
 | `nix run .#serve-api` + `curl localhost:8080/api/wec/<season>/<id>.json` | the round is served, `track.circuit` names the word; `index.json` lists it |
 | `nix run .#test` | the app decodes the new feed — classes, eras, mini-sectors |

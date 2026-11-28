@@ -52,7 +52,13 @@ pub mod Sql.TestExpr {
         );
         Assert.assertTrue(Sql.decode(Schema.read(lap1), TestCells.answering(Schema.read(lap1), SqlValue.Str("12") :: Nil)) == Ok("12"))
 
-    def leMans(): Entry = { season = 2025, id = "le_mans_24h", date = "2025-06-14" }
+    def leMans(): Entry = {
+        season  = 2025,
+        id      = "le_mans_24h",
+        date    = "2025-06-14",
+        name    = "24 Hours of Le Mans",
+        circuit = Some(Motorsport.Circuit.Circuit.LeMans)
+    }
 
     /// The id `rounds` gave the round, which every reading of either table is
     /// scoped by. Both tables have a `round_id`, so the scope names the source

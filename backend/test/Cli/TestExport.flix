@@ -8,9 +8,21 @@ pub mod Cli.TestExport {
     use Round.TestSupport
     use Motorsport.Calendar.Entry
 
-    def fuji(): Entry = { season = 2025, id = "fuji_6h", date = "2025-09-28" }
+    def fuji(): Entry = {
+        season  = 2025,
+        id      = "fuji_6h",
+        date    = "2025-09-28",
+        name    = "6 Hours of Fuji",
+        circuit = Some(Motorsport.Circuit.Circuit.Fuji)
+    }
 
-    def imola(): Entry = { season = 2025, id = "imola_6h", date = "2025-04-20" }
+    def imola(): Entry = {
+        season  = 2025,
+        id      = "imola_6h",
+        date    = "2025-04-20",
+        name    = "6 Hours of Imola",
+        circuit = Some(Motorsport.Circuit.Circuit.Imola)
+    }
 
     /// The paths are never reached: `read` decides before anything is written.
     def task(entry: Entry): FileTask.Output =

@@ -13,7 +13,7 @@ pub mod Round.TestTimeline {
     use Motorsport.Wec
     use Motorsport.Wec.RawLap
 
-    def entry(): Entry = { season = 2025, id = "test", date = "2025-01-01" }
+    def entry(): Entry = { season = 2025, id = "test", date = "2025-01-01", name = "test", circuit = None }
 
     /// Asked of the laps rather than of the rows the load wrote: the time limit
     /// a test is about is its own, and a load derives that one from the laps.

@@ -7,7 +7,6 @@ pub mod Motorsport.Metadata {
     use Util.HourClock.Hour
     use Motorsport.Calendar
     use Motorsport.Car.Car
-    use Motorsport.Events
     use Motorsport.Track
 
     /// What the grid order was derived from. The timing feed carries no
@@ -83,7 +82,7 @@ pub mod Motorsport.Metadata {
         builds: List[CarBuild]
     ): Metadata =
         {
-            name         = Events.displayName(entry#id),
+            name         = entry#name,
             season       = entry#season,
             date         = entry#date,
             race         = race,

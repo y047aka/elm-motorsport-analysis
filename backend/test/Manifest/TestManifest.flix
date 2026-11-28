@@ -1,10 +1,10 @@
 pub mod Manifest.TestManifest {
 
     use oj::OrderedJson
-    use Motorsport.Calendar
+    use Motorsport.TestCalendarSupport
 
     def rendered(urlRoot: String): String =
-        OrderedJson.toPrettyString(2, Manifest.toJson(urlRoot, Calendar.seasons()))
+        OrderedJson.toPrettyString(2, Manifest.toJson(urlRoot, TestCalendarSupport.calendar()#seasons))
 
     @Test
     def testTheCalendarJsonCarriesEverySeasonWithItsRoundsNamed(): Unit \ Assert =

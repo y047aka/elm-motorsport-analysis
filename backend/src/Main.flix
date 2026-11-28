@@ -10,7 +10,9 @@ use Cli.Errors.CliError
 use Cli.Errors.checkDirectory
 use Cli.Load
 use Cli.Export
+use Motorsport.CalendarFile
 
+    use Motorsport.Calendar.Calendar
     use Sqlitefx.DbError
     use Sqlitefx.SqlRead
     use Sqlitefx.SqlWrite
@@ -23,23 +25,74 @@ def main(): Unit \ {Env, IO, Exit, Console} =
             Console.eprintln(Args.usage());
             1
         case Ok(Command.Serve(serve)) =>
-            runServer(serve#port, serve#database)
+            onCalendar(calendar -> runServer(serve#port, serve#database, calendar))
         case Ok(Command.Convert(convert)) =>
-            onDirectories(convert#csv :: convert#out :: Nil, convert#database, conn ->
-                loadAndExport(conn, convert#csv, convert#out, convert#exported))
+            onCalendar(calendar ->
+                match unknownRound(calendar, convert#exported) {
+                    case Some(name) => roundNotFound(name)
+                    case None       => onDirectories(convert#csv :: convert#out :: Nil, convert#database, conn ->
+                        loadAndExport(conn, convert#csv, convert#out, convert#exported, calendar))
+                })
         case Ok(Command.Load(load)) =>
-            onDirectories(load#csv :: Nil, load#database, conn -> Load.runAll(conn, load#csv))
+            onCalendar(calendar ->
+                onDirectories(load#csv :: Nil, load#database, conn -> Load.runAll(conn, load#csv, calendar)))
         case Ok(Command.Export(export)) =>
-            onDirectories(export#out :: Nil, export#database, _ -> Export.runAll(export#out, export#exported))
+            onCalendar(calendar ->
+                match unknownRound(calendar, export#exported) {
+                    case Some(name) => roundNotFound(name)
+                    case None       => onDirectories(export#out :: Nil, export#database, _ ->
+                        Export.runAll(calendar, export#out, export#exported))
+                })
     };
     Exit.exit(code)
+
+/// The calendar is read once, before any stage: it is the worklist, the
+/// calendar route, and the words in every file name, and a run that cannot
+/// read it says so before touching a database.
+def onCalendar(k: Calendar -> Int32 \ ef): Int32 \ ef + Env + IO + Console =
+    match CalendarFile.read(calendarPath()) {
+        case Err(e)     =>
+            Console.eprintln("Error: ${e}");
+            1
+        case Ok(calendar) => k(calendar)
+    }
+
+/// `CALENDAR_FILE` says the same to every run in a shell as `DATABASE_URL`
+/// does; the default sits beside the CSV directory the flake names.
+def calendarPath(): String \ Env =
+    match Env.getVar("CALENDAR_FILE") {
+        case Some(path) => path
+        case None       => CalendarFile.defaultPath()
+    }
+
+/// `--export-only` narrows the writing stage, and a name no round on the
+/// calendar answers to fails the run before anything is written.
+def unknownRound(calendar: Calendar, rounds: Cli.FileTask.Rounds): Option[String] =
+    match rounds {
+        case Cli.FileTask.Rounds.Every       => None
+        case Cli.FileTask.Rounds.Only(names) =>
+            names
+                |> List.filterMap(name ->
+                    match name {
+                        case (season, id) =>
+                            match Motorsport.Calendar.find(calendar, season, id) {
+                                case None    => Some("${season}/${id}")
+                                case Some(_) => None
+                            }
+                    })
+                |> List.head
+    }
+
+def roundNotFound(name: String): Int32 \ Console =
+    Console.eprintln("Error: --export-only names no round on the calendar: ${name}");
+    1
 
 /// A round that failed to load has no rows, so the export fails it too and
 /// leaves the files it would have replaced alone. The rounds beside it are
 /// written either way.
-def loadAndExport(conn: Connection, csv: String, out: String, rounds: Cli.FileTask.Rounds): Int32 \ {IO, Console, SqlRead, RawSql} =
-    let loaded = Load.runAll(conn, csv);
-    let exported = Export.runAll(out, rounds);
+def loadAndExport(conn: Connection, csv: String, out: String, rounds: Cli.FileTask.Rounds, calendar: Calendar): Int32 \ {IO, Console, SqlRead, RawSql} =
+    let loaded = Load.runAll(conn, csv, calendar);
+    let exported = Export.runAll(calendar, out, rounds);
     if (loaded == 0 and exported == 0) 0 else 1
 
 /// Both stages compute in a database, so one given none is one that cannot say
@@ -62,10 +115,10 @@ def onDirectories(dirs: List[String], database: Option[String], stage: Connectio
 
 /// The database is reached once per request, so the server starts before one is
 /// up and reports it per request.
-def runServer(port: Int32, database: Option[String]): Int32 \ {Env, IO, Console} =
+def runServer(port: Int32, database: Option[String], calendar: Calendar): Int32 \ {Env, IO, Console} =
     withDatabase(database, url -> {
         Console.println("Serving /api on port ${port}");
-        match Server.serve(port, url) {
+        match Server.serve(port, url, calendar) {
             case Ok(())  => 0
             case Err(e)  => Console.eprintln("Error: ${e}"); 1
         }

@@ -8,7 +8,13 @@ pub mod Round.TestLaps {
     use Motorsport.Wec.RawLap
     use Util.Json.Extra
 
-    def fuji(): Entry = { season = 2025, id = "fuji_6h", date = "2025-09-28" }
+    def fuji(): Entry = {
+        season  = 2025,
+        id      = "fuji_6h",
+        date    = "2025-09-28",
+        name    = "6 Hours of Fuji",
+        circuit = Some(Motorsport.Circuit.Circuit.Fuji)
+    }
 
     def readBack(laps: List[RawLap]): List[Laps.Placed] \ IO =
         TestSupport.onRound(fuji(), laps, () -> Laps.read(fuji(), Round.Drivers.read(fuji())))

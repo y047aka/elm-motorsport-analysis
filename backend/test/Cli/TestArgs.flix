@@ -144,17 +144,13 @@ pub mod Cli.TestArgs {
         }
 
     /// A round id says nothing about which year ran it, so half a name is no
-    /// name, and neither is a name the calendar does not list.
+    /// name, and neither is a year no season is numbered by.
     @Test
-    def testExportOnlyNeedsARoundTheCalendarLists(): Unit \ Assert =
+    def testExportOnlyNeedsASeasonAndAnId(): Unit \ Assert =
         let rejected = name ->
             Result.isErr(Args.parse("--export-only" :: name :: both()));
         Assert.assertTrue(rejected("le_mans_24h"));
-        Assert.assertTrue(rejected("2025/"));
-        Assert.assertTrue(rejected("latest/le_mans_24h"));
-        Assert.assertTrue(rejected("2025/monza_6h"));
-        // Ran in 2025 and 2026, and not in 2024.
-        Assert.assertTrue(rejected("2024/spa_6h"))
+        Assert.assertTrue(rejected("latest/le_mans_24h"))
 
     /// Serving is not a stage of a converting run, so it has no writing to
     /// narrow.

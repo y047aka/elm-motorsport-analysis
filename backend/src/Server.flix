@@ -21,17 +21,18 @@ pub mod Server {
     use Server.Api
     use Server.Api.Response
     use Server.Api.Route
+    use Motorsport.Calendar.Calendar
 
     def threads(): Int32 = 8
 
     /// Returns when the process is killed: `main` returning would take the JVM
     /// with it, and a server has nothing else to wait for.
-    pub def serve(port: Int32, databaseUrl: String): Result[String, Unit] \ IO =
+    pub def serve(port: Int32, databaseUrl: String, calendar: Calendar): Result[String, Unit] \ IO =
         try {
             let server = HttpServer.create(new InetSocketAddress(port), 0);
             discard server.createContext("/api", new HttpHandler {
                 def handle(_this: HttpHandler, exchange: HttpExchange): Unit \ IO =
-                    RawSql.runWithAllow(() -> answer(databaseUrl, exchange))
+                    RawSql.runWithAllow(() -> answer(databaseUrl, calendar, exchange))
             });
             server.setExecutor(Executors.newFixedThreadPool(threads()));
             server.start();
@@ -47,29 +48,29 @@ pub mod Server {
     ///
     /// The statements this answers with are the server's own, so the request
     /// handler is where the marker saying their text was written is discharged.
-    def answer(databaseUrl: String, exchange: HttpExchange): Unit \ {IO, RawSql} =
+    def answer(databaseUrl: String, calendar: Calendar, exchange: HttpExchange): Unit \ {IO, RawSql} =
         let response = try {
-            respond(databaseUrl, exchange)
+            respond(databaseUrl, calendar, exchange)
         } catch {
             case e: Throwable => failed(e)
         };
         send(exchange, response)
 
-    def respond(databaseUrl: String, exchange: HttpExchange): Response \ {IO, RawSql} =
-        let route = Api.route(exchange.getRequestURI().getPath());
+    def respond(databaseUrl: String, calendar: Calendar, exchange: HttpExchange): Response \ {IO, RawSql} =
+        let route = Api.route(calendar, exchange.getRequestURI().getPath());
         if (Api.needsDatabase(route))
-            fromDatabase(databaseUrl, route)
+            fromDatabase(databaseUrl, calendar, route)
         else
             // Nothing is read, so there is nothing for the rows to answer with.
-            DbTest.runWithRows(Nil, () -> Api.respond(route))
+            DbTest.runWithRows(Nil, () -> Api.respond(calendar, route))
 
     /// A connection per request. `java.sql.Connection` is not thread-safe, and
     /// the requests are answered on a pool.
     ///
     /// The answer is read in one transaction, so every statement of it sees the database as it stood when the first was sent: a run committing in the middle would otherwise hand one request the summary of one load and the laps of the next.
-    def fromDatabase(databaseUrl: String, route: Route): Response \ {IO, RawSql} =
+    def fromDatabase(databaseUrl: String, calendar: Calendar, route: Route): Response \ {IO, RawSql} =
         let answered = try {
-            DbError.runWithFailure(() -> Jdbc.withConnection(Db.connection(databaseUrl), conn -> Tx.withTx(conn, () -> Api.respond(route))))
+            DbError.runWithFailure(() -> Jdbc.withConnection(Db.connection(databaseUrl), conn -> Tx.withTx(conn, () -> Api.respond(calendar, route))))
         } catch {
             case e: Throwable => Ok(failed(e))
         };

@@ -12,7 +12,7 @@ pub mod Cli.Load.TestValidation {
     use Motorsport.Wec
     use Motorsport.Wec.RawLap
 
-    def entry(): Entry = { season = 2025, id = "test", date = "2025-01-01" }
+    def entry(): Entry = { season = 2025, id = "test", date = "2025-01-01", name = "test", circuit = None }
 
     def detect(laps: List[RawLap]): List[Violation] \ IO =
         TestSupport.onRound(entry(), laps, () -> Validation.detect(entry()))

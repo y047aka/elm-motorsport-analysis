@@ -4,9 +4,24 @@ pub mod Db.TestRounds {
     use Db.Rounds
     use Motorsport.Calendar
     use Motorsport.Calendar.Entry
+    use Motorsport.Circuit.Circuit
+    use Motorsport.TestCalendarSupport
 
-    def fuji(): Entry = { season = 2025, id = "fuji_6h", date = "2025-09-28" }
-    def spa2026(): Entry = { season = 2026, id = "spa_6h", date = "2026-05-09" }
+    def fuji(): Entry = {
+        season  = 2025,
+        id      = "fuji_6h",
+        date    = "2025-09-28",
+        name    = "6 Hours of Fuji",
+        circuit = Some(Circuit.Fuji)
+    }
+
+    def spa2026(): Entry = {
+        season  = 2026,
+        id      = "spa_6h",
+        date    = "2026-05-09",
+        name    = "6 Hours of Spa",
+        circuit = Some(Circuit.Spa)
+    }
 
     /// `spa_6h` ran in 2025 and in 2026, so the season is half of what names a
     /// round and half of what the id is looked up by.
@@ -22,17 +37,19 @@ pub mod Db.TestRounds {
         let rows = Rounds.rowsFor(fuji() :: spa2026() :: Nil);
         Assert.assertTrue(Rounds.idIn(rows, spa2026()) == Some(2));
         Assert.assertTrue(
-            Rounds.idIn(rows, { season = 2025, id = "spa_6h", date = "2025-05-10" }) == None
+            Rounds.idIn(rows, { season = 2025, id = "spa_6h", date = "2025-05-10", name = "6 Hours of Spa", circuit = Some(Circuit.Spa) }) == None
         )
 
     /// Every round the run may load takes a row, so a task can always be
     /// numbered.
     @Test
     def theCalendarNumbersEveryRoundItLists(): Unit \ Assert =
-        let rows = Rounds.rowsFor(Calendar.entries());
-        Assert.assertTrue(List.length(rows) == List.length(Calendar.entries()));
+        let calendar = TestCalendarSupport.calendar();
+        let entries = Calendar.entries(calendar);
+        let rows = Rounds.rowsFor(entries);
+        Assert.assertTrue(List.length(rows) == List.length(entries));
         Assert.assertTrue(
-            Calendar.entries() |> List.forAll(entry -> Rounds.idIn(rows, entry) != None)
+            entries |> List.forAll(entry -> Rounds.idIn(rows, entry) != None)
         )
 
     @Test

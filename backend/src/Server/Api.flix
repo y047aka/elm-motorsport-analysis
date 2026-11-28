@@ -16,6 +16,7 @@ pub mod Server.Api {
     use Round.Summary
     use Round.Timeline
     use Motorsport.Calendar
+    use Motorsport.Calendar.Calendar
     use Motorsport.Calendar.Entry
     use Motorsport.Wec
     use Util.Json.Extra
@@ -42,20 +43,20 @@ pub mod Server.Api {
     /// Where the app reads the rounds from, as `/static/wec` is where it reads
     /// the exported files from. A round is named here the way the export names
     /// its files, so one path is the other with its root replaced.
-    pub def urlRoot(): String =
-        "/api/${Calendar.series()}"
+    pub def urlRoot(calendar: Calendar): String =
+        "/api/${Calendar.series(calendar)}"
 
     /// The series segment is read, not matched: a path under a series no
     /// calendar answers to is no one's round.
-    pub def route(path: String): Route =
+    pub def route(calendar: Calendar, path: String): Route =
         match String.splitOn({substr = "/"}, path) {
             case "" :: "api" :: "health" :: Nil => Route.Health
-            case "" :: "api" :: series :: "index.json" :: Nil if series == Calendar.series() => Route.Calendar
-            case "" :: "api" :: series :: season :: file :: Nil if series == Calendar.series() => roundRoute(season, file)
+            case "" :: "api" :: series :: "index.json" :: Nil if series == Calendar.series(calendar) => Route.Calendar
+            case "" :: "api" :: series :: season :: file :: Nil if series == Calendar.series(calendar) => roundRoute(calendar, season, file)
             case _ => Route.NotFound
         }
 
-    def roundRoute(season: String, file: String): Route =
+    def roundRoute(calendar: Calendar, season: String, file: String): Route =
         match Int32.fromString(season) {
             case None => Route.NotFound
             case Some(year) =>
@@ -64,15 +65,15 @@ pub mod Server.Api {
                     String.stripSuffix({substr = "_timeline.jsonl"}, file),
                     String.stripSuffix({substr = ".json"}, file)
                 ) {
-                    case (Some(id), _, _) => listed(year, id, Route.Laps(year, id))
-                    case (_, Some(id), _) => listed(year, id, Route.Timeline(year, id))
-                    case (_, _, Some(id)) => listed(year, id, Route.Summary(year, id))
+                    case (Some(id), _, _) => listed(calendar, year, id, Route.Laps(year, id))
+                    case (_, Some(id), _) => listed(calendar, year, id, Route.Timeline(year, id))
+                    case (_, _, Some(id)) => listed(calendar, year, id, Route.Summary(year, id))
                     case _                => Route.NotFound
                 }
         }
 
-    def listed(season: Int32, id: String, found: Route): Route =
-        match Calendar.find(season, id) {
+    def listed(calendar: Calendar, season: Int32, id: String, found: Route): Route =
+        match Calendar.find(calendar, season, id) {
             case Some(_) => found
             case None    => Route.NotFound
         }
@@ -86,13 +87,13 @@ pub mod Server.Api {
             case _                    => false
         }
 
-    pub def respond(route: Route): Response \ {SqlRead, RawSql} =
+    pub def respond(calendar: Calendar, route: Route): Response \ {SqlRead, RawSql} =
         match route {
             case Route.Health            => ok("text/plain", "ok")
-            case Route.Calendar          => ok("application/json", calendar())
-            case Route.Summary(year, id)  => body("application/json", () -> summary(year, id))
-            case Route.Laps(year, id)     => body("application/jsonl", () -> laps(year, id))
-            case Route.Timeline(year, id) => body("application/jsonl", () -> timeline(year, id))
+            case Route.Calendar          => ok("application/json", calendarJson(calendar))
+            case Route.Summary(year, id)  => body("application/json", () -> summary(calendar, year, id))
+            case Route.Laps(year, id)     => body("application/jsonl", () -> laps(calendar, year, id))
+            case Route.Timeline(year, id) => body("application/jsonl", () -> timeline(calendar, year, id))
             case Route.NotFound           => notFound("not found")
         }
 
@@ -123,32 +124,33 @@ pub mod Server.Api {
         };
         { status = status, contentType = "text/plain", body = reason, cause = Some(DbError.describeFailure(cause)) }
 
-    def calendar(): String =
-        Extra.render(Manifest.toJson(urlRoot(), Calendar.seasons()))
+    def calendarJson(calendar: Calendar): String =
+        Extra.render(Manifest.toJson(urlRoot(calendar), calendar#seasons))
 
-    def summary(season: Int32, id: String): Option[String] \ DbRead + RawSql =
-        answer(season, id, e ->
+    def summary(calendar: Calendar, season: Int32, id: String): Option[String] \ DbRead + RawSql =
+        answer(calendar, season, id, e ->
             let seats = Round.Drivers.read(e);
             Render.renderSummary(Summary.read(e, seats), Index.read(e, seats)))
 
-    def timeline(season: Int32, id: String): Option[String] \ DbRead + RawSql =
-        answer(season, id, e ->
+    def timeline(calendar: Calendar, season: Int32, id: String): Option[String] \ DbRead + RawSql =
+        answer(calendar, season, id, e ->
             let seats = Round.Drivers.read(e);
             Render.renderTimelineJsonl(Timeline.detailed(e, seats, Index.read(e, seats))))
 
-    def laps(season: Int32, id: String): Option[String] \ DbRead + RawSql =
-        answer(season, id, e -> Render.renderJsonl(Laps.read(e, Round.Drivers.read(e))))
+    def laps(calendar: Calendar, season: Int32, id: String): Option[String] \ DbRead + RawSql =
+        answer(calendar, season, id, e -> Render.renderJsonl(Laps.read(e, Round.Drivers.read(e))))
 
     /// `None` is a round no answer is served for: one the calendar does not
     /// list, and one it lists that no run has loaded. Rendered out of the rows
     /// the second would be a race that never ran, which is the one thing they
     /// cannot say for themselves.
     def answer(
+        calendar: Calendar,
         season: Int32,
         id: String,
         render: Entry -> String \ DbRead + RawSql
     ): Option[String] \ DbRead + RawSql =
-        match Calendar.find(season, id) {
+        match Calendar.find(calendar, season, id) {
             case None        => None
             case Some(round) =>
                 if (Round.loaded(round))

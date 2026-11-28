@@ -3,7 +3,6 @@ pub mod Cli.Args {
     use Util.GetOpt.ArgDescr
     use Util.GetOpt.OptionDescr
     use Cli.FileTask.Rounds
-    use Motorsport.Calendar
 
     pub enum ArgsError with ToString {
         case MissingDirectory(String)
@@ -155,8 +154,7 @@ pub mod Cli.Args {
         match String.splitOn({substr = "/"}, name) {
             case season :: id :: Nil =>
                 Int32.fromString(season)
-                    |> Option.flatMap(year -> Calendar.find(year, id))
-                    |> Option.map(entry -> (entry#season, entry#id))
+                    |> Option.map(year -> (year, id))
             case _ => None
         }
 

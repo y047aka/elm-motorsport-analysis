@@ -2,13 +2,18 @@ pub mod Cli.TestFileTask {
 
     use Cli.FileTask
     use Cli.FileTask.Rounds
+    use Motorsport.Calendar.Calendar
+    use Motorsport.TestCalendarSupport
+
+    def calendar(): Calendar =
+        TestCalendarSupport.calendar()
 
     def inputFor(season: Int32, id: String): Option[FileTask.Input] =
-        FileTask.inputs("../data/wec")
+        FileTask.inputs(calendar(), "../data/wec")
             |> List.find(t -> t#entry#season == season and t#entry#id == id)
 
     def outputFor(season: Int32, id: String): Option[FileTask.Output] =
-        FileTask.outputs("../app/static/wec", Rounds.Every)
+        FileTask.outputs(calendar(), "../app/static/wec", Rounds.Every)
             |> List.find(t -> t#entry#season == season and t#entry#id == id)
 
     @Test
@@ -43,7 +48,7 @@ pub mod Cli.TestFileTask {
         }
 
     def labelsOf(rounds: Rounds): List[String] =
-        FileTask.outputs("../app/static/wec", rounds) |> List.map(FileTask.label)
+        FileTask.outputs(calendar(), "../app/static/wec", rounds) |> List.map(FileTask.label)
 
     /// Every season, not only the one the calendar lists first.
     @Test
@@ -61,6 +66,15 @@ pub mod Cli.TestFileTask {
             labelsOf(Rounds.Only((2024, "fuji_6h") :: (2025, "le_mans_24h") :: Nil))
                 == "2025/le_mans_24h" :: "2024/fuji_6h" :: Nil
         )
+
+    /// A name the calendar does not list names no round to write, whichever half
+    /// of it is wrong -- an id nobody ran, and an id nobody wrote down at all.
+    @Test
+    def testOnlyIsNoRoundsWhereTheNamesAreNoRounds(): Unit \ Assert =
+        Assert.assertTrue(labelsOf(Rounds.Only((2025, "monza_6h") :: Nil)) == Nil);
+        Assert.assertTrue(labelsOf(Rounds.Only((2024, "spa_6h") :: Nil)) == Nil);
+        Assert.assertTrue(labelsOf(Rounds.Only((2025, "") :: Nil)) == Nil);
+        Assert.assertTrue(labelsOf(Rounds.Only((2025, "spa_6h") :: Nil)) == "2025/spa_6h" :: Nil)
 
     @Test
     def testTheLabelNamesTheRoundNotJustTheFile(): Unit \ Assert =

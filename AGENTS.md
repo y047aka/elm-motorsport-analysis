@@ -9,7 +9,7 @@ SQLite → HTTP or a JSON export → Elm visualization.
 - **`/package`** — reusable Elm library (motorsport domain models), reached
   through `elm.json`.
 - **`/backend`** — Flix: the CLI that moves CSV through SQLite into JSON/JSONL, and the server that answers `/api` out of the same rows. Read `backend/README.md` before changing anything here.
-- **`/data`** — the timing CSV, `data/wec/<season>/<id>.csv`, read by the CLI, and the manufacturer table, `data/wec/manufacturers.json`, which `app/codegen` compiles into the app. It sits outside `/app` because the build copies all of `app/static` into the bundle.
+- **`/data`** — the timing CSVs and the calendar, `data/wec/<season>/<id>.csv` and `data/wec/calendar.json`, read by the CLI, and the manufacturer table, `data/wec/manufacturers.json`, which `app/codegen` compiles into the app. It sits outside `/app` because the build copies all of `app/static` into the bundle.
 
 There is no manifest at the repository root; the flake is what ties the parts
 together.
@@ -72,7 +72,7 @@ They are not registered with Claude Code's `Skill` tool: read the file and follo
 
 **The served geometry and circuit maps are owned upstream**: `app/static/geometry/*.geojson` and `app/static/circuit-maps/*.json` are not committed — the dev, build, test, VRT and Tauri commands copy them from the pinned `circuit-maps-3d` flake input (`github:y047aka/circuit-maps-3d`) into the working tree. A bump of the pin that moves a geometry moves every tracker VRT baseline with it; the upstream fence is what proves its bytes are reproducible from the kept OpenStreetMap evidence.
 
-**A checkout holds the CSV, the calendar and two rounds' files**: 2025's Le Mans and Circuit of the Americas, so the VRT and a dev server work with nothing run first.
+**A checkout holds the CSV, the calendar file and two rounds' files**: 2025's Le Mans and Circuit of the Americas, so the VRT and a dev server work with nothing run first.
 Every other round's files are ignored rather than committed; `.#tauri-build` is the one command that writes them all.
 A round left unwritten is quiet: the dev server answers `/api` for it with a 502, and a Tauri bundle hands back its own `index.html`, which then fails to decode.
 A kept file is an export like any other, so a summary that grows a key the drawing is chosen by has to be written out again over the kept rounds: `track.circuit` missing reads as a circuit with no drawing.
@@ -80,7 +80,7 @@ A kept file is an export like any other, so a summary that grows a key the drawi
 **The timeline is rows too**: the load counts it off the laps into `timeline_events`, so a lap corrected in SQL reaches the summary and the laps on the next export and the timeline not at all — and the next load rebuilds every table off the CSV and takes the correction with it.
 Correct `timeline_events` beside `laps`.
 
-`.#cli-run` converts every round `Motorsport.Calendar` lists and fails any whose CSV is missing; app-side, `Data.Wec.Calendar` is the only source of which rounds exist and where their files are.
+`.#cli-run` converts every round `data/wec/calendar.json` lists and fails any whose CSV is missing; app-side, `Data.Wec.Calendar` is the only source of which rounds exist and where their files are.
 The Vite dev server forwards `/api` to port 8080 and answers it from `static/` when nothing is listening.
 
 `static/car-images.json` is read by no compiler: a mistake shows as a car drawn without a photograph, not as a build that fails.

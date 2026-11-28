@@ -1,6 +1,7 @@
 pub mod Cli.FileTask {
 
     use Motorsport.Calendar
+    use Motorsport.Calendar.Calendar
     use Motorsport.Calendar.Entry
 
     /// One round's CSV, built from a calendar entry and the directory the run
@@ -30,16 +31,16 @@ pub mod Cli.FileTask {
 
     /// Every round the calendar holds, under `root`. A CSV no entry names is
     /// not here, so it is never read; `Cli.Load.Unlisted` reports those.
-    pub def inputs(root: String): List[Input] =
-        Calendar.entries() |> List.map(entry ->
+    pub def inputs(calendar: Calendar, root: String): List[Input] =
+        Calendar.entries(calendar) |> List.map(entry ->
             { inputPath = "${stem(root, entry)}.csv", entry = entry }
         )
 
     /// The rounds `rounds` names, under `root`. Every name is a round
-    /// `Cli.Args` has already found on the calendar, so there is nothing here
+    /// `Main` has already found on the calendar, so there is nothing here
     /// to fail.
-    pub def outputs(root: String, rounds: Rounds): List[Output] =
-        Calendar.entries()
+    pub def outputs(calendar: Calendar, root: String, rounds: Rounds): List[Output] =
+        Calendar.entries(calendar)
             |> List.filter(entry -> match rounds {
                 case Rounds.Every       => true
                 case Rounds.Only(names) => List.memberOf((entry#season, entry#id), names)

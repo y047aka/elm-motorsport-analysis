@@ -4,7 +4,13 @@ pub mod Round.TestLoaded {
     use Motorsport.Calendar.Entry
     use Round.TestSupport
 
-    def fuji(): Entry = { season = 2025, id = "fuji_6h", date = "2025-09-28" }
+    def fuji(): Entry = {
+        season  = 2025,
+        id      = "fuji_6h",
+        date    = "2025-09-28",
+        name    = "6 Hours of Fuji",
+        circuit = Some(Motorsport.Circuit.Circuit.Fuji)
+    }
 
     @Test
     def aRoundInBothTablesIsLoaded(): Unit \ {Assert, IO} =

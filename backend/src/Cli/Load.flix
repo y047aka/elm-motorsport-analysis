@@ -60,10 +60,10 @@ pub mod Cli.Load {
     /// run that dies partway through leaves the rounds it was rebuilding from.
     /// A round the database refused is reported and counted, and the rounds
     /// beside it are still committed.
-    pub def runAll(conn: Connection, root: String): Int32 \ {IO, Console, RawSql} =
+    pub def runAll(conn: Connection, root: String, calendar: Motorsport.Calendar.Calendar): Int32 \ {IO, Console, RawSql} =
         let rebuild = DbError.runWithFailure(() -> Tx.withTx(conn, () -> {
-            let rounds = createTables();
-            convertRounds(root, rounds)
+            let rounds = createTables(calendar);
+            convertRounds(calendar, root, rounds)
         }));
         match rebuild {
             case Err(e) =>
@@ -80,8 +80,8 @@ pub mod Cli.Load {
     /// two carry of a round is an id out of it. The rows come back because
     /// that id is read off them: the reader looks it up in the table, and the
     /// load has nothing to look it up with until the table is written.
-    def createTables(): List[RoundRow] \ DbWrite + RawSql =
-        let rounds = Rounds.create(Motorsport.Calendar.entries());
+    def createTables(calendar: Motorsport.Calendar.Calendar): List[RoundRow] \ DbWrite + RawSql =
+        let rounds = Rounds.create(Motorsport.Calendar.entries(calendar));
         Drivers.create();
         CarDrivers.create();
         Entries.create();
@@ -94,8 +94,8 @@ pub mod Cli.Load {
     /// nothing else. Two ways that can be wrong, and both are said out loud: a
     /// round with no CSV fails the run, and a CSV no round names is reported and
     /// left alone.
-    def convertRounds(root: String, rounds: List[RoundRow]): Int32 \ {IO, Console, Sqlitefx.Db, SqlSavepoint, RawSql} =
-        let tasks = FileTask.inputs(root);
+    def convertRounds(calendar: Motorsport.Calendar.Calendar, root: String, rounds: List[RoundRow]): Int32 \ {IO, Console, Sqlitefx.Db, SqlSavepoint, RawSql} =
+        let tasks = FileTask.inputs(calendar, root);
         let summary = List.foldLeft(
             (acc, task) -> match processFile(rounds, acc#numbered, task) {
                 case (Ok(loaded), numbered) =>

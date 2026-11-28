@@ -62,9 +62,9 @@ has a map of, with the direction that map's survey carries;
 [`Tracker.fromConfig`](Motorsport-Chart-Tracker#fromConfig) draws every other as
 the ring.
 
-`circuit` is the CLI's word for the ground the round was run on --
-`Motorsport.Events.circuit`. What the app asks it is only "is there a drawing
-of this", and a name it has never had one for is the ring, which is the answer
+`circuit` is the calendar file's word for the ground the round was run on, carried
+through to the summary as `track.circuit`. What the app asks it is only "is there a
+drawing of this", and a name it has never had one for is the ring, which is the answer
 `Nothing` gives too.
 
 -}

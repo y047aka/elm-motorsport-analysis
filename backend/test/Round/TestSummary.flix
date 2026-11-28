@@ -17,12 +17,30 @@ pub mod Round.TestSummary {
     /// The calendar entries these tests convert. Written out rather than looked
     /// up, so a change to the real calendar cannot quietly rewrite what a test
     /// is asserting about.
-    def leMans(): Entry = { season = 2025, id = "le_mans_24h", date = "2025-06-14" }
+    def leMans(): Entry = {
+        season  = 2025,
+        id      = "le_mans_24h",
+        date    = "2025-06-14",
+        name    = "24 Hours of Le Mans",
+        circuit = Some(Motorsport.Circuit.Circuit.LeMans)
+    }
 
-    def fuji(): Entry = { season = 2025, id = "fuji_6h", date = "2025-09-28" }
+    def fuji(): Entry = {
+        season  = 2025,
+        id      = "fuji_6h",
+        date    = "2025-09-28",
+        name    = "6 Hours of Fuji",
+        circuit = Some(Motorsport.Circuit.Circuit.Fuji)
+    }
 
-    /// A round `Motorsport.Events` has no name for.
-    def unlisted(): Entry = { season = 2025, id = "custom_event", date = "2025-01-01" }
+    /// A round named after nothing grander than its own id.
+    def unlisted(): Entry = {
+        season  = 2025,
+        id      = "custom_event",
+        date    = "2025-01-01",
+        name    = "custom_event",
+        circuit = None
+    }
 
     /// Builds a RawLap with only the columns a test needs filled in; of the 22,
     /// the rest are placeholders.
@@ -217,9 +235,8 @@ pub mod Round.TestSummary {
         let json = OrderedJson.toPrettyString(2, Metadata.toJson(metadata(fuji(), Nil)));
         Assert.assertTrue(not String.contains({substr = "\"startedAt\""}, json))
 
-    /// The name still falls back to the id, because an entry can name a round
-    /// `Motorsport.Events` has never been told about. The date cannot fall back
-    /// to anything, and does not have to: it came in with the entry.
+    /// A round whose name is its id is dated all the same: both come in with the
+    /// entry, and neither is looked up.
     @Test
     def testAnUnnamedRoundIsStillDated(): Unit \ {Assert, IO} =
         let laps = mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota") :: Nil;
