@@ -60,10 +60,13 @@ pub mod Motorsport.Index {
             |> List.filterMap(match (r, changes) -> if (r == record) Some(changes) else None)
             |> List.flatten
 
-    pub def toJson(index: Index): OrderedJson.Json =
+    /// `hasMiniSectors` is whether the round's feed measured mini-sectors, which
+    /// is the round's `track.miniSectors` being there: the key is absent when
+    /// they were not, as in the timeline's `performance`.
+    pub def toJson(hasMiniSectors: Bool, index: Index): OrderedJson.Json =
         JObject(
             ("lapCompletions",  JArray(index#lapCompletions |> List.map(completionToJson) |> List.toVector)) ::
-            ("bestTimeChanges", bestTimesToJson(index)) ::
+            ("bestTimeChanges", bestTimesToJson(hasMiniSectors, index)) ::
             ("flagChanges",     JArray(index#flags |> List.map(flagToJson) |> List.toVector)) ::
             Nil
         )
@@ -85,14 +88,20 @@ pub mod Motorsport.Index {
                 )
         }
 
-    def bestTimesToJson(index: Index): OrderedJson.Json =
+    def bestTimesToJson(hasMiniSectors: Bool, index: Index): OrderedJson.Json =
+        let miniField =
+            if (hasMiniSectors)
+                ("miniSectors", JArray(MiniSector.all() |> List.map(m ->
+                    JObject(("name", JString(MiniSector.csvName(m))) ::
+                            ("changes", changesToJson(Record.FastestMiniSector(m), index)) ::
+                            Nil)) |> List.toVector)) :: Nil
+            else
+                Nil;
         JObject(
             ("fastestLapTime", changesToJson(Record.FastestLap, index)) ::
             ("sectors", JObject(Sector.all() |> List.map(s ->
                 (Sector.jsonKey(s), changesToJson(Record.FastestSector(s), index))))) ::
-            ("miniSectors", JObject(MiniSector.all() |> List.map(m ->
-                (MiniSector.jsonKey(m), changesToJson(Record.FastestMiniSector(m), index))))) ::
-            Nil
+            miniField
         )
 
     def changesToJson(record: Record, index: Index): OrderedJson.Json =

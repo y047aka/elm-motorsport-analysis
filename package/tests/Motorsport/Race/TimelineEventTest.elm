@@ -9,11 +9,11 @@ import Motorsport.Flag exposing (Flag(..))
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
+import Motorsport.MiniSector as MiniSector
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..))
 import Motorsport.TestHelpers.Driver exposing (driverNamed)
 import Motorsport.TestHelpers.Lap as TestLap
-import Motorsport.Wec.Circuit.LeMans as LeMans
 import Test exposing (Test, describe, test)
 
 
@@ -137,12 +137,14 @@ lapDetail =
 
                             Just mini ->
                                 Expect.equal
-                                    (LeMans.get LeMans.SCL2 mini
-                                        |> (\r -> ( r.time, r.fastest, r.personalBest ))
+                                    (MiniSector.get "SCL2" mini
+                                        |> Maybe.map (\r -> ( r.time, r.fastest, r.personalBest ))
                                     )
-                                    ( Duration.fromString "8.151"
-                                    , Duration.fromString "8.151"
-                                    , Duration.fromString "8.151"
+                                    (Just
+                                        ( Duration.fromString "8.151"
+                                        , Duration.fromString "8.151"
+                                        , Duration.fromString "8.151"
+                                        )
                                     )
         , test "a lap named with nothing beside it fails the round" <|
             \_ ->
@@ -243,7 +245,7 @@ cotaFastestLap =
 -}
 leMansFastestLap : String
 leMansFastestLap =
-    """{ "elapsed": "7:11.321", "event": "fastestLap", "carNumber": "5", "lap": 2, "driver": "Julien ANDLAUER", "performance": { "lap": { "time": "3:28.312", "fastest": "3:28.312", "personalBest": "3:28.312" }, "sectors": { "s1": { "time": "32.944", "fastest": "32.944", "personalBest": "32.944" }, "s2": { "time": "1:19.882", "fastest": "1:19.882", "personalBest": "1:19.882" }, "s3": { "time": "1:35.486", "fastest": "1:35.486", "personalBest": "1:35.486" } }, "miniSectors": { "scl2": { "time": "8.151", "fastest": "8.151", "personalBest": "8.151" }, "z4": { "time": "10.176", "fastest": "10.176", "personalBest": "10.176" }, "ip1": { "time": "14.617", "fastest": "14.617", "personalBest": "14.617" }, "z12": { "time": "32.700", "fastest": "32.700", "personalBest": "32.700" }, "sclc": { "time": "4.770", "fastest": "4.629", "personalBest": "4.762" }, "a7_1": { "time": "25.436", "fastest": "25.436", "personalBest": "25.436" }, "ip2": { "time": "16.976", "fastest": "16.919", "personalBest": "16.976" }, "a8_1": { "time": "6.535", "fastest": "6.535", "personalBest": "6.535" }, "sclb": { "time": "36.619", "fastest": "36.619", "personalBest": "36.619" }, "porin": { "time": "16.821", "fastest": "16.708", "personalBest": "16.821" }, "porout": { "time": "15.298", "fastest": "15.298", "personalBest": "15.298" }, "pitref": { "time": "7.822", "fastest": "7.796", "personalBest": "7.817" }, "scl1": { "time": "2.597", "fastest": "2.597", "personalBest": "2.597" }, "fordout": { "time": "6.249", "fastest": "6.189", "personalBest": "6.249" }, "fl": { "time": "3.545", "fastest": "3.437", "personalBest": "3.503" } } } }"""
+    """{ "elapsed": "7:11.321", "event": "fastestLap", "carNumber": "5", "lap": 2, "driver": "Julien ANDLAUER", "performance": { "lap": { "time": "3:28.312", "fastest": "3:28.312", "personalBest": "3:28.312" }, "sectors": { "s1": { "time": "32.944", "fastest": "32.944", "personalBest": "32.944" }, "s2": { "time": "1:19.882", "fastest": "1:19.882", "personalBest": "1:19.882" }, "s3": { "time": "1:35.486", "fastest": "1:35.486", "personalBest": "1:35.486" } }, "miniSectors": [{"name":"SCL2","time":"8.151","fastest":"8.151","personalBest":"8.151"},{"name":"Z4","time":"10.176","fastest":"10.176","personalBest":"10.176"},{"name":"IP1","time":"14.617","fastest":"14.617","personalBest":"14.617"},{"name":"Z12","time":"32.700","fastest":"32.700","personalBest":"32.700"},{"name":"SCLC","time":"4.770","fastest":"4.629","personalBest":"4.762"},{"name":"A7-1","time":"25.436","fastest":"25.436","personalBest":"25.436"},{"name":"IP2","time":"16.976","fastest":"16.919","personalBest":"16.976"},{"name":"A8-1","time":"6.535","fastest":"6.535","personalBest":"6.535"},{"name":"SCLB","time":"36.619","fastest":"36.619","personalBest":"36.619"},{"name":"PORIN","time":"16.821","fastest":"16.708","personalBest":"16.821"},{"name":"POROUT","time":"15.298","fastest":"15.298","personalBest":"15.298"},{"name":"PITREF","time":"7.822","fastest":"7.796","personalBest":"7.817"},{"name":"SCL1","time":"2.597","fastest":"2.597","personalBest":"2.597"},{"name":"FORDOUT","time":"6.249","fastest":"6.189","personalBest":"6.249"},{"name":"FL","time":"3.545","fastest":"3.437","personalBest":"3.503"}] } }"""
 
 
 {-| The handover reads the laps either side of the event, so these are the two

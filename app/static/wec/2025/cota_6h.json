@@ -1843,23 +1843,6 @@
             "driver": "Alessandro PIER GUIDI"
           }
         ]
-      },
-      "miniSectors": {
-        "scl2": [],
-        "z4": [],
-        "ip1": [],
-        "z12": [],
-        "sclc": [],
-        "a7_1": [],
-        "ip2": [],
-        "a8_1": [],
-        "sclb": [],
-        "porin": [],
-        "porout": [],
-        "pitref": [],
-        "scl1": [],
-        "fordout": [],
-        "fl": []
       }
     },
     "flagChanges": [

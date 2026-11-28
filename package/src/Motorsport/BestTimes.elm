@@ -23,12 +23,12 @@ arrives with the round's summary.
 import Decode.Driver as Driver
 import Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Json.Decode as Decode exposing (Decoder, field)
-import Json.Decode.Pipeline exposing (required)
+import Json.Decode.Pipeline exposing (optional, required)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
+import Motorsport.MiniSector as MiniSector exposing (MiniSectors)
 import Motorsport.Sector as Sector exposing (BySector)
-import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector)
 
 
 {-| Every moment one of the race's records changed hands. What the times are at
@@ -67,7 +67,7 @@ done to the nineteen records goes through `map`, so they are enumerated once.
 type alias ByRecord a =
     { fastestLapTime : a
     , fastestSectors : BySector a
-    , fastestMiniSectors : ByMiniSector a
+    , fastestMiniSectors : MiniSectors a
     }
 
 
@@ -75,7 +75,7 @@ map : (a -> b) -> ByRecord a -> ByRecord b
 map f records =
     { fastestLapTime = f records.fastestLapTime
     , fastestSectors = Sector.initialize (\sector -> f (Sector.get sector records.fastestSectors))
-    , fastestMiniSectors = LeMans.initialize (\mini -> f (LeMans.get mini records.fastestMiniSectors))
+    , fastestMiniSectors = MiniSector.map f records.fastestMiniSectors
     }
 
 
@@ -86,42 +86,31 @@ empty : Changes
 empty =
     { fastestLapTime = ChangePoints.empty
     , fastestSectors = Sector.initialize (\_ -> ChangePoints.empty)
-    , fastestMiniSectors = LeMans.initialize (\_ -> ChangePoints.empty)
+    , fastestMiniSectors = []
     }
 
 
 {-| Read the records as the round's summary spells them out.
+
+`miniSectors` is absent where the round's feed measured none, which is the
+empty list here -- the same fact `track.miniSectors` being absent states.
+
 -}
 changesDecoder : Decoder Changes
 changesDecoder =
-    Decode.map3 ByRecord
-        (field "fastestLapTime" holdersDecoder)
-        (field "sectors" (Decode.map3 BySector (field "s1" holdersDecoder) (field "s2" holdersDecoder) (field "s3" holdersDecoder)))
-        (field "miniSectors" miniSectorsDecoder)
+    Decode.succeed ByRecord
+        |> required "fastestLapTime" holdersDecoder
+        |> required "sectors" (Decode.map3 BySector (field "s1" holdersDecoder) (field "s2" holdersDecoder) (field "s3" holdersDecoder))
+        |> optional "miniSectors" miniSectorsDecoder []
 
 
-miniSectorsDecoder : Decoder (ByMiniSector (ChangePoints Holder))
+miniSectorsDecoder : Decoder (MiniSectors (ChangePoints Holder))
 miniSectorsDecoder =
-    let
-        miniSector key =
-            required key holdersDecoder
-    in
-    Decode.succeed LeMans.ByMiniSector
-        |> miniSector "scl2"
-        |> miniSector "z4"
-        |> miniSector "ip1"
-        |> miniSector "z12"
-        |> miniSector "sclc"
-        |> miniSector "a7_1"
-        |> miniSector "ip2"
-        |> miniSector "a8_1"
-        |> miniSector "sclb"
-        |> miniSector "porin"
-        |> miniSector "porout"
-        |> miniSector "pitref"
-        |> miniSector "scl1"
-        |> miniSector "fordout"
-        |> miniSector "fl"
+    Decode.list
+        (Decode.map2 (\name changes -> { name = name, value = changes })
+            (field "name" Decode.string)
+            (field "changes" holdersDecoder)
+        )
 
 
 holdersDecoder : Decoder (ChangePoints Holder)

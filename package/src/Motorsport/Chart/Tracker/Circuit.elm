@@ -23,7 +23,6 @@ import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Sector as Sector
 import Motorsport.Simulation.Pace.ReferenceLap as ReferenceLap
 import Motorsport.Wec.Circuit.Layout exposing (Layout, Lengths)
-import Motorsport.Wec.Circuit.LeMans as LeMans
 import Quantity
 import Svg exposing (Svg, g, line, polygon, polyline, svg, text, text_)
 import Svg.Attributes exposing (class, dominantBaseline, fill, points, stroke, strokeLinejoin, textAnchor)
@@ -351,16 +350,19 @@ circuitLabels labels circuit =
 
                         MiniSectorShares shares ->
                             shares
-                                |> LeMans.toList
-                                |> List.filter (\( _, { share } ) -> share > 0)
+                                |> List.filter (\{ value } -> value.share > 0)
                                 |> List.map
-                                    (\( mini, { start, share } ) ->
+                                    (\{ name, value } ->
+                                        let
+                                            { start, share } =
+                                                value
+                                        in
                                         labelOnCircuit circuit
                                             { at = LapScale.distanceAt circuit.scale (start + share)
                                             , offset = miniSectorRadius
                                             , fontSize = miniSectorFontSize
                                             , color = "oklch(0.5 0 0)"
-                                            , label = LeMans.toString mini
+                                            , label = name
                                             }
                                     )
             in

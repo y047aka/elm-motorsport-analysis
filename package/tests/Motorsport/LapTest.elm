@@ -1,12 +1,10 @@
 module Motorsport.LapTest exposing (tests)
 
 import Expect
-import List.Extra
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Sector as Sector exposing (Sector(..))
 import Motorsport.TestHelpers.Lap as TestLap
-import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Test exposing (..)
 
 
@@ -25,6 +23,13 @@ lap =
     }
 
 
+{-| The fifteen names the fixture's lap is split by, in track order.
+-}
+names : List String
+names =
+    [ "SCL2", "Z4", "IP1", "Z12", "SCLC", "A7-1", "IP2", "A8-1", "SCLB", "PORIN", "POROUT", "PITREF", "SCL1", "FORDOUT", "FL" ]
+
+
 {-| The same lap, with fifteen even mini-sectors of 400 covering its 6.000.
 
 Their running totals are what places them, so the nth in track order ends
@@ -36,13 +41,17 @@ lapWithMiniSectors =
     { lap
         | miniSectors =
             Just
-                (LeMans.initialize
-                    (\mini ->
-                        { time = Just 400
-                        , elapsedInLap = Just (400 * (indexOf mini + 1))
-                        , personalBest = Nothing
+                (List.indexedMap
+                    (\position name ->
+                        { name = name
+                        , value =
+                            { time = Just 400
+                            , elapsedInLap = Just (400 * (position + 1))
+                            , personalBest = Nothing
+                            }
                         }
                     )
+                    names
                 )
     }
 
@@ -50,30 +59,22 @@ lapWithMiniSectors =
 {-| The same lap with one mini-sector's running total missing, as the source
 data occasionally leaves it.
 -}
-withoutRunningTotalFor : LeMans2025MiniSector -> Lap
+withoutRunningTotalFor : String -> Lap
 withoutRunningTotalFor missing =
     { lapWithMiniSectors
         | miniSectors =
             lapWithMiniSectors.miniSectors
                 |> Maybe.map
-                    (LeMans.map2
-                        (\mini times ->
-                            if mini == missing then
-                                { times | elapsedInLap = Nothing }
+                    (List.map
+                        (\entry ->
+                            if entry.name == missing then
+                                { name = entry.name, value = { time = entry.value.time, elapsedInLap = Nothing, personalBest = entry.value.personalBest } }
 
                             else
-                                times
+                                entry
                         )
-                        (LeMans.initialize identity)
                     )
     }
-
-
-indexOf : LeMans2025MiniSector -> Int
-indexOf mini =
-    LeMans.all
-        |> List.Extra.elemIndex mini
-        |> Maybe.withDefault 0
 
 
 empty : Lap
@@ -219,7 +220,7 @@ tests =
             [ test "starts the first at the line and each of the rest where the one before ended" <|
                 \_ ->
                     Lap.miniSegments lapWithMiniSectors
-                        |> List.map (Tuple.second >> .start)
+                        |> List.map (.segment >> .start)
                         |> List.take 4
                         |> Expect.equal [ instant 4000, instant 4400, instant 4800, instant 5200 ]
             , test "takes each one's length from the running totals, not from its own time" <|
@@ -227,28 +228,28 @@ tests =
                     -- Every mini-sector of the fixture ends 400 after the one
                     -- before it, so each is 400 long.
                     Lap.miniSegments lapWithMiniSectors
-                        |> List.map (Tuple.second >> .time)
+                        |> List.map (.segment >> .time)
                         |> Expect.equal (List.repeat 15 400)
             , test "ends the last one where the lap ended" <|
                 \_ ->
                     Lap.miniSegments lapWithMiniSectors
                         |> List.reverse
                         |> List.head
-                        |> Maybe.map (\( _, s ) -> Instant.add s.time s.start)
+                        |> Maybe.map (\mini -> Instant.add mini.segment.time mini.segment.start)
                         |> Expect.equal (Just lapWithMiniSectors.elapsed)
             , test "drops the one whose running total is missing, and the one after it" <|
                 \_ ->
                     -- IP1's total is what places IP1 and starts Z12, so losing
                     -- it loses both. The rest are placed as before.
-                    Lap.miniSegments (withoutRunningTotalFor IP1)
-                        |> List.map Tuple.first
-                        |> Expect.equal (List.filter (\m -> m /= IP1 && m /= Z12) LeMans.all)
+                    Lap.miniSegments (withoutRunningTotalFor "IP1")
+                        |> List.map .miniSector
+                        |> Expect.equal (List.filter (\name -> name /= "IP1" && name /= "Z12") names)
             , test "places the ones after a gap exactly where they were" <|
                 \_ ->
-                    Lap.miniSegments (withoutRunningTotalFor IP1)
-                        |> List.filter (\( mini, _ ) -> mini == SCLC)
+                    Lap.miniSegments (withoutRunningTotalFor "IP1")
+                        |> List.filter (\mini -> mini.miniSector == "SCLC")
                         |> Expect.equal
-                            (List.filter (\( mini, _ ) -> mini == SCLC)
+                            (List.filter (\mini -> mini.miniSector == "SCLC")
                                 (Lap.miniSegments lapWithMiniSectors)
                             )
             , test "a lap from a circuit that records none has none" <|
@@ -261,7 +262,7 @@ tests =
                 \_ ->
                     -- Z4 runs 4.400 to 4.800.
                     Lap.miniSectorProgressAt { elapsed = instant 4600 } lapWithMiniSectors
-                        |> Expect.equal (Just { miniSector = Z4, progress = 0.5, time = 400 })
+                        |> Expect.equal (Just { miniSector = "Z4", position = 1, progress = 0.5, time = 400 })
             , test "reports no mini-sector at all once the lap is over, rather than the last one" <|
                 \_ ->
                     Lap.miniSectorProgressAt { elapsed = instant 10000 } lapWithMiniSectors
@@ -269,11 +270,11 @@ tests =
             , test "reports none inside a stretch the running totals could not place" <|
                 \_ ->
                     -- 5.000 falls in IP1, which `withoutRunningTotalFor` loses.
-                    Lap.miniSectorProgressAt { elapsed = instant 5000 } (withoutRunningTotalFor IP1)
+                    Lap.miniSectorProgressAt { elapsed = instant 5000 } (withoutRunningTotalFor "IP1")
                         |> Expect.equal Nothing
             , test "agrees with miniSectorStart, where progress is zero" <|
                 \_ ->
-                    LeMans.all
+                    names
                         |> List.map (\mini -> Lap.miniSectorStart mini lapWithMiniSectors)
                         |> List.map
                             (\start ->

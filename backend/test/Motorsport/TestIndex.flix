@@ -30,12 +30,12 @@ pub mod Motorsport.TestIndex {
     /// what is written.
     @Test
     def everyRecordIsWritten(): Unit \ Assert =
-        let json = Extra.render(Index.toJson(sample()));
+        let json = Extra.render(Index.toJson(true, sample()));
         Assert.assertTrue(String.contains({substr = "\"fastestLapTime\""}, json));
         Assert.assertTrue(Sector.all() |> List.forAll(s ->
             String.contains({substr = "\"${Sector.jsonKey(s)}\""}, json)));
         Assert.assertTrue(MiniSector.all() |> List.forAll(m ->
-            String.contains({substr = "\"${MiniSector.jsonKey(m)}\""}, json)))
+            String.contains({substr = "\"${MiniSector.csvName(m)}\""}, json)))
 
     @Test
     def theCountAgreesWithTheEnumeration(): Unit \ Assert =
@@ -45,7 +45,7 @@ pub mod Motorsport.TestIndex {
     /// it, and the moment it was set at.
     @Test
     def aChangeCarriesTheRecordAndWhoTookIt(): Unit \ Assert =
-        let json = Extra.render(Index.toJson(sample()));
+        let json = Extra.render(Index.toJson(true, sample()));
         Assert.assertTrue(String.contains({substr = "\"elapsed\": \"1:02:03.009\""}, json));
         Assert.assertTrue(String.contains({substr = "\"time\": \"3:24.123\""}, json));
         Assert.assertTrue(String.contains({substr = "\"carNumber\": \"7\""}, json));
@@ -58,7 +58,7 @@ pub mod Motorsport.TestIndex {
     def aCompletionIsALapAndAMoment(): Unit \ Assert =
         Assert.assertTrue(String.contains(
             {substr = "{ \"lap\": 1, \"elapsed\": \"3:43.009\" }"},
-            Extra.render(Index.toJson(sample()))
+            Extra.render(Index.toJson(true, sample()))
         ))
 
     /// A flag change is the flag and the moment the line first read it, spelled
@@ -67,16 +67,24 @@ pub mod Motorsport.TestIndex {
     def aFlagChangeIsAFlagAndAMoment(): Unit \ Assert =
         Assert.assertTrue(String.contains(
             {substr = "{ \"elapsed\": \"11:11:48.962\", \"flag\": \"safetyCar\" }"},
-            Extra.render(Index.toJson(sample()))
+            Extra.render(Index.toJson(true, sample()))
         ))
 
     /// A record nothing was read for is written as an empty list rather than
     /// left out, so a reader takes the same shape from every round.
     @Test
     def aRecordNoLapTookIsEmptyRatherThanMissing(): Unit \ Assert =
-        let json = Extra.render(Index.toJson(Index.empty()));
+        let json = Extra.render(Index.toJson(true, Index.empty()));
         Assert.assertTrue(String.contains({substr = "\"lapCompletions\": []"}, json));
         Assert.assertTrue(String.contains({substr = "\"fastestLapTime\": []"}, json));
         Assert.assertTrue(String.contains({substr = "\"flagChanges\": []"}, json))
+
+    /// Whether the key is there is the same fact `track.miniSectors` states.
+    @Test
+    def miniSectorsAreAbsentWhereTheFeedMeasuredNone(): Unit \ Assert =
+        let without = Extra.render(Index.toJson(false, sample()));
+        Assert.assertTrue(not(String.contains({substr = "\"miniSectors\""}, without)));
+        let with_ = Extra.render(Index.toJson(true, sample()));
+        Assert.assertTrue(String.contains({substr = "\"miniSectors\""}, with_))
 
 }

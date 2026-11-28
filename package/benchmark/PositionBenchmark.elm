@@ -45,9 +45,9 @@ suite =
             (\_ -> Laps.fromJsonl Fixture.rawLap)
         , Benchmark.compare "putting a round's laps on the cars"
             "counting the positions here"
-            (\_ -> Legacy.attach legacyLaps grid)
+            (\_ -> Legacy.attach miniSectorNames legacyLaps grid)
             "reading them off the lap"
-            (\_ -> Laps.attach currentLaps grid)
+            (\_ -> Laps.attach miniSectorNames currentLaps grid)
         , Benchmark.scale "assignPositions, which the second no longer runs"
             (scaled |> List.map (\( name, cars ) -> ( name, \_ -> Legacy.assignPositions cars )))
         ]
@@ -70,7 +70,14 @@ scaled =
 
 attachedTo : Int -> List Car
 attachedTo bound =
-    Laps.attach (currentLaps |> List.filter (\lap -> lap.lapNumber <= bound)) grid
+    Laps.attach miniSectorNames (currentLaps |> List.filter (\lap -> lap.lapNumber <= bound)) grid
+
+
+{-| The track order the fixture's round names its mini-sectors in.
+-}
+miniSectorNames : List String
+miniSectorNames =
+    [ "SCL2", "Z4", "IP1", "Z12", "SCLC", "A7-1", "IP2", "A8-1", "SCLB", "PORIN", "POROUT", "PITREF", "SCL1", "FORDOUT", "FL" ]
 
 
 {-| The starting grid both sides attach laps to, decoded once: what is being

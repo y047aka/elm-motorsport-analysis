@@ -11,8 +11,8 @@ where round the lap that stretch begins.
 Divided by the CLI and decoded in `Data.Wec`.
 
 Read for every car of every frame, which is what decides the shape here: the
-shares are held per sector and per mini-sector, so reading one is
-[`Sector.get`](Motorsport-Sector#get) rather than a scan.
+shares are held per sector and per mini-sector, and a mini-sector's is read by
+name off a list as long as the lap is split fine.
 
 @docs TrackConfig, Share
 @docs MiniSectorShares
@@ -22,9 +22,9 @@ shares are held per sector and per mini-sector, so reading one is
 -}
 
 import Motorsport.Duration exposing (Duration)
+import Motorsport.MiniSector as MiniSector exposing (MiniSectors)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector exposing (BySector)
-import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector)
 
 
 {-| The whole lap, divided. Both grains cover the same lap, so a car can be
@@ -38,7 +38,7 @@ type alias TrackConfig =
 
 {-| One stretch of the lap: where it begins and how much of the lap it takes,
 both as fractions of the whole. Which stretch it is belongs to the position in
-a `BySector` or a `ByMiniSector`.
+a `BySector`, or to the name in a `MiniSector.MiniSectors`.
 -}
 type alias Share =
     { start : Float
@@ -50,7 +50,7 @@ type alias Share =
 -}
 type MiniSectorShares
     = NoMiniSectors
-    | MiniSectorShares (ByMiniSector Share)
+    | MiniSectorShares (MiniSectors Share)
 
 
 {-| How far round the lap a car is, as a fraction of it.
@@ -85,12 +85,14 @@ stretchOf config car =
     case ( config.miniSectors, car.currentLap.miniSectors ) of
         ( MiniSectorShares shares, Snapshot.Recorded { current } ) ->
             case current of
-                Just miniSector ->
-                    Just
-                        { share = LeMans.get miniSector.miniSector shares
-                        , progress = miniSector.progress
-                        , time = miniSector.time
-                        }
+                Just mini ->
+                    case MiniSector.get mini.miniSector shares of
+                        Just share ->
+                            Just { share = share, progress = mini.progress, time = mini.time }
+
+                        -- Nowhere to place the car at the finer grain.
+                        Nothing ->
+                            bySector config car
 
                 -- Nowhere to place the car at the finer grain.
                 Nothing ->
@@ -131,7 +133,7 @@ boundaries config =
         stretches =
             case config.miniSectors of
                 MiniSectorShares shares ->
-                    LeMans.values shares
+                    MiniSector.values shares
 
                 NoMiniSectors ->
                     Sector.values config.sectors

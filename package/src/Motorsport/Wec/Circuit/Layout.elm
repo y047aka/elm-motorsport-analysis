@@ -24,8 +24,8 @@ import Length exposing (Length)
 import Motorsport.Circuit.Geodesy exposing (Frame, project)
 import Motorsport.Circuit.Relief as Relief exposing (Relief)
 import Motorsport.Circuit.Shape as Shape exposing (Mark, Point, Shape)
+import Motorsport.MiniSector as MiniSector
 import Motorsport.Sector exposing (BySector)
-import Motorsport.Wec.Circuit.LeMans exposing (ByMiniSector)
 
 
 {-| The circuit as the tracker draws it.
@@ -55,19 +55,20 @@ type alias TimingLines =
 
 {-| Whether the circuit's map places lines finer than its three sectors.
 `SectorsOnly` is a circuit whose timing is never measured that far; a `Nothing`
-inside `LeMansMiniSectors` is a line the map gives no distance for. Having no
-lines at all is a different answer from having fifteen, most of which the map
-leaves no distance for.
+inside `MiniSectors` is a line the map gives no distance for. Having no lines at
+all is a different answer from having fifteen, most of which the map leaves no
+distance for.
 
-[`MiniSectorShares`](Motorsport-Chart-Tracker-Config#MiniSectorShares) is the
-same question asked of a round's timing rather than of its circuit, and
+The names are the circuit's own, in track order, and are the same strings the
+round's shares are named by: [`MiniSectorShares`](Motorsport-Chart-Tracker-Config#MiniSectorShares)
+is the same question asked of a round's timing rather than of its circuit, and
 [`lapScale`](Motorsport-Chart-Tracker-LapScale#lapScale) is where the two answers
 are read together.
 
 -}
 type MiniSectorLines
     = SectorsOnly
-    | LeMansMiniSectors (ByMiniSector (Maybe Length))
+    | MiniSectors (MiniSector.MiniSectors (Maybe Length))
 
 
 {-| The lengths one detail of a circuit's drawing is made at, in metres on the

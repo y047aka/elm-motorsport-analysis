@@ -1,7 +1,7 @@
 /// The fifteen mini-sectors Le Mans's feed measures a lap in, which ride beside
-/// the standard S1/S2/S3 split and come in that round's feed alone. Their ids,
-/// their CSV column names and their JSON keys are spelled here and nowhere else
-/// on this side of the seam.
+/// the standard S1/S2/S3 split and come in that round's feed alone. Their ids and
+/// their names -- one spelling for the CSV column prefix and for the JSON key --
+/// are spelled here and nowhere else on this side of the seam.
 pub mod Motorsport.MiniSector {
 
     use Motorsport.Sector.Sector
@@ -24,9 +24,11 @@ pub mod Motorsport.MiniSector {
         case FL
     }
 
-    /// In track order. `Motorsport.Wec.Circuit.LeMans.all` is the same list
-    /// Elm-side, and nothing reads the two against each other: a reordering here
-    /// is a marker misplaced there.
+    /// In track order. The names are the join key across the seam: the drawing's
+    /// timing lines (`Wec/Circuit/LeMans/Layout`) and the shares the summary
+    /// carries are matched to each other by name, and nothing reads the lists
+    /// against each other -- a name spelled one way here and another there puts a
+    /// marker in the wrong place, silently.
     pub def all(): List[MiniSectorId] =
         List#{
             MiniSectorId.SCL2, MiniSectorId.Z4, MiniSectorId.IP1,
@@ -56,9 +58,13 @@ pub mod Motorsport.MiniSector {
             case MiniSectorId.FL      => Sector.S3
         }
 
-    /// CSV column prefix. A7_1 / A8_1 map to the hyphenated `A7-1` / `A8-1`
-    /// (the Flix identifier underscore is a syntax constraint, not part of
-    /// the column name). Each prefix yields two columns: `_time` and `_elapsed`.
+    /// The name, in the track order's own spelling. It is the CSV column prefix --
+    /// each prefix yields two columns, `_time` and `_elapsed` -- and the JSON key
+    /// the file names the mini-sector by, which is what the Elm side joins its
+    /// lists on.
+    ///
+    /// A7_1 / A8_1 map to the hyphenated `A7-1` / `A8-1` (the Flix identifier
+    /// underscore is a syntax constraint, not part of the name).
     pub def csvName(id: MiniSectorId): String =
         match id {
             case MiniSectorId.SCL2    => "SCL2"
@@ -76,27 +82,6 @@ pub mod Motorsport.MiniSector {
             case MiniSectorId.SCL1    => "SCL1"
             case MiniSectorId.FORDOUT => "FORDOUT"
             case MiniSectorId.FL      => "FL"
-        }
-
-    /// JSON object key — lower-case `csvName` with the hyphen reverted to an
-    /// underscore (the keys `Data.Wec.Laps` decodes on the Elm side).
-    pub def jsonKey(id: MiniSectorId): String =
-        match id {
-            case MiniSectorId.SCL2    => "scl2"
-            case MiniSectorId.Z4      => "z4"
-            case MiniSectorId.IP1     => "ip1"
-            case MiniSectorId.Z12     => "z12"
-            case MiniSectorId.SCLC    => "sclc"
-            case MiniSectorId.A7_1    => "a7_1"
-            case MiniSectorId.IP2     => "ip2"
-            case MiniSectorId.A8_1    => "a8_1"
-            case MiniSectorId.SCLB    => "sclb"
-            case MiniSectorId.PORIN   => "porin"
-            case MiniSectorId.POROUT  => "porout"
-            case MiniSectorId.PITREF  => "pitref"
-            case MiniSectorId.SCL1    => "scl1"
-            case MiniSectorId.FORDOUT => "fordout"
-            case MiniSectorId.FL      => "fl"
         }
 
     /// The blank patterns a car running off the Ford chicanes leaves: the second

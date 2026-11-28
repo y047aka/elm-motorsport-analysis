@@ -130,8 +130,8 @@ Where the timing lines stand is the served circuit map's (`static/circuit-maps/<
 A line the map gives no distance for is placed by the time between the lines either side of it (`Tracker.LapScale.lapScale`).
 A circuit whose feed is never timed finer than three sectors is drawn less finely too: between two of its lines a COTA car is placed by the time it has run between them, where a Le Mans car is placed by a mini-sector.
 
-`LeMansMiniSectors` holds Le Mans's fifteen mini-sectors by name and is load-bearing in three places: the sum, `Data.Wec.byMiniSectorDecoder` (which requires all fifteen keys, so a differently-split lap reads as `NoMiniSectors`), and `Tracker.LapScale.lapScale`.
-The first other circuit whose feed carries mini-sectors has to generalize all three together — a named list at both ends, joined by name — and re-make the decoder's `optional` decision, because what catches a missing line today is the record's totality.
+`Motorsport.MiniSector`'s `MiniSectors` joins by name in three places: `Lap.miniSegments` (which carries the list position, keeping `Lap.compare` O(1)), `Data.Wec.Laps` (which reads a lap's keys into a `Dict` and lays them in the order the shares name them), and `Tracker.LapScale.lapScale`.
+The join never fails, so a name present on one side only drops its entry, silently.
 `LapScaleTest` names the two combinations the `lapScale` catch-all holds; do not "simplify" it into reading one side.
 
 `Circuit/Layout`'s Le Mans `Lengths` are frozen by a test: every Le Mans snapshot was rendered with them. Any length moved on any circuit goes through `.#update-snapshots-ci`.

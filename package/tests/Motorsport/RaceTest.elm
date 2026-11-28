@@ -204,7 +204,7 @@ flagged =
 
 indexJson : String -> String
 indexJson flag =
-    """{ "lapCompletions": [], "bestTimeChanges": { "fastestLapTime": [], "sectors": { "s1": [], "s2": [], "s3": [] }, "miniSectors": { "scl2": [], "z4": [], "ip1": [], "z12": [], "sclc": [], "a7_1": [], "ip2": [], "a8_1": [], "sclb": [], "porin": [], "porout": [], "pitref": [], "scl1": [], "fordout": [], "fl": [] } }, "flagChanges": [ { "elapsed": "1:00.000", "flag": """
+    """{ "lapCompletions": [], "bestTimeChanges": { "fastestLapTime": [], "sectors": { "s1": [], "s2": [], "s3": [] }, "miniSectors": [] }, "flagChanges": [ { "elapsed": "1:00.000", "flag": """
         ++ ("\"" ++ flag ++ "\" } ] }")
 
 

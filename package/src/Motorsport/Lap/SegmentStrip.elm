@@ -25,8 +25,8 @@ import Html exposing (Html, div, text)
 import Html.Attributes exposing (class, style, title)
 import Motorsport.Duration as Duration
 import Motorsport.Lap.Performance as Performance exposing (RatedTime, SegmentState)
+import Motorsport.MiniSector exposing (MiniSectors)
 import Motorsport.Sector as Sector exposing (BySector, Sector)
-import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector)
 
 
 {-| The three sectors of the lap the car is on.
@@ -49,46 +49,59 @@ sectorsRated rated =
         )
 
 
-{-| The seventeen columns of the Le Mans strip: the fifteen mini-sectors in
-track order, with a spacer where each of the first two sectors ends.
+{-| The mini-sector strip: the round's mini-sectors in track order, with a spacer
+where each of the first two sectors ends.
 -}
-miniSectors : ByMiniSector SegmentState -> Html msg
+miniSectors : MiniSectors SegmentState -> Html msg
 miniSectors states =
-    miniStrip (\mini state -> progressCell (LeMans.toString mini) state) states
+    miniStrip progressCell states
 
 
-{-| The same seventeen columns for a lap that is over.
+{-| The same strip for a lap that is over.
 -}
-miniSectorsRated : ByMiniSector (Maybe RatedTime) -> Html msg
+miniSectorsRated : MiniSectors (Maybe RatedTime) -> Html msg
 miniSectorsRated rated =
-    miniStrip (\mini rating -> ratedCell (LeMans.toString mini) rating) rated
+    miniStrip ratedCell rated
 
 
 {-| The strip's columns are as wide as the stretches of track they stand for, and
-two of them are the gaps where a sector ends -- so the cells are laid out here
-rather than mapped over, the spacers falling where they belong.
+two of them are the gaps where a sector ends -- so the cells are laid out with
+those gaps rather than mapped straight over the mini-sectors, which is why the
+round has to have exactly as many mini-sectors as the columns are wide.
 -}
-miniStrip : (LeMans.LeMans2025MiniSector -> a -> Html msg) -> ByMiniSector a -> Html msg
-miniStrip cell values =
+miniStrip : (String -> a -> Html msg) -> MiniSectors a -> Html msg
+miniStrip cell entries =
     div [ class miniSectorColumns ]
-        [ cell LeMans.SCL2 values.scl2
-        , cell LeMans.Z4 values.z4
-        , cell LeMans.IP1 values.ip1
-        , spacer
-        , cell LeMans.Z12 values.z12
-        , cell LeMans.SCLC values.sclc
-        , cell LeMans.A7_1 values.a7_1
-        , cell LeMans.IP2 values.ip2
-        , spacer
-        , cell LeMans.A8_1 values.a8_1
-        , cell LeMans.SCLB values.sclb
-        , cell LeMans.PORIN values.porin
-        , cell LeMans.POROUT values.porout
-        , cell LeMans.PITREF values.pitref
-        , cell LeMans.SCL1 values.scl1
-        , cell LeMans.FORDOUT values.fordout
-        , cell LeMans.FL values.fl
-        ]
+        (entries
+            |> List.map (\{ name, value } -> cell name value)
+            |> gapsAfter [ 3, 7 ]
+        )
+
+
+{-| A spacer after each of these many cells. `overMiniSectors` spans the same
+grouping: three mini-sectors, four and eight.
+-}
+gapsAfter : List Int -> List (Html msg) -> List (Html msg)
+gapsAfter positions cells =
+    gapsFrom positions 1 cells
+
+
+gapsFrom : List Int -> Int -> List (Html msg) -> List (Html msg)
+gapsFrom positions count cells =
+    case cells of
+        [] ->
+            []
+
+        cell :: rest ->
+            let
+                tail =
+                    gapsFrom positions (count + 1) rest
+            in
+            if List.member count positions then
+                cell :: spacer :: tail
+
+            else
+                cell :: tail
 
 
 {-| The columns a strip is laid out in, which anything drawn over or under one

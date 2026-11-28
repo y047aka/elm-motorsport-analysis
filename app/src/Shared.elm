@@ -24,8 +24,10 @@ import Json.Decode as Decode exposing (Decoder)
 import Motorsport.Analysis.Energy as Energy
 import Motorsport.Analysis.Strategy as Strategy
 import Motorsport.Chart.Tracker as Tracker
+import Motorsport.Chart.Tracker.Config exposing (MiniSectorShares(..))
 import Motorsport.Class as Class
 import Motorsport.Clock as Clock
+import Motorsport.MiniSector as MiniSector
 import Motorsport.Race as Race
 import Motorsport.Race.Car as Car
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
@@ -510,10 +512,18 @@ didNotArrive key error round =
 roundFrom : Wec.Event -> List WecLaps.RawLap -> List TimelineEvent -> Awaited -> LoadedRound
 roundFrom summary rawLaps timelineEvents drawing =
     let
+        miniSectorNames =
+            case summary.track.config.miniSectors of
+                NoMiniSectors ->
+                    []
+
+                MiniSectorShares shares ->
+                    MiniSector.names shares
+
         replay =
             summary.startingGrid.entries
                 |> List.map Car.fromStartingGrid
-                |> WecLaps.attach rawLaps
+                |> WecLaps.attach miniSectorNames rawLaps
                 |> Replay.fromCars
                     { timeLimit = summary.timeLimit
                     , finishedAt = summary.finishedAt
