@@ -191,6 +191,6 @@ A line a change adds to this file must name no closer owner: what one module, RE
 
 The Nix flake provides Node.js 26 and a Rust toolchain for `app/src-tauri` (the only Rust package).
 Enter it with `nix develop`, or run one command in it with `nix develop --command <cmd>`, which is what CI does; there is no direnv hook.
-`flake.nix` holds the commands, and `nix/vrt.nix` the VRT's.
+`flake.nix` holds the commands, `nix/vrt.nix` the VRT's, and `nix/codegen.nix` the generated sources'.
 
 `gh` is in the dev shell (`nix develop --command gh ...`); authentication (`gh auth login`) is the user's own step.

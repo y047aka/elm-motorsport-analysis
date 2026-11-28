@@ -74,61 +74,10 @@
         # reads both from `app/static/` under their served names, and nothing
         # compares the two sides' bytes: a pinned input whose geometry moves
         # moves every tracker VRT baseline with it.
-        #
-        # Every command that reads the files copies the pinned bytes into the
-        # working tree first; they are not committed.
         circuitData = circuit-maps-3d.packages.${system}.default;
-        syncCircuitData = ''
-          mkdir -p app/static/geometry app/static/circuit-maps
-          cp -f ${circuitData}/geometry/*.geojson app/static/geometry/
-          for f in ${circuitData}/specs/*.json; do
-            cp -f "$f" "app/static/circuit-maps/$(basename "$f")"
-          done
-        '';
 
-        # The package's tests read the same pinned bytes the app serves, and they
-        # read them off the input rather than off `app/static/`: a stale copy in
-        # the working tree is then not what a test passes on.
-        # A directory holding no file is refused here, where the message can name
-        # it, rather than by a generator left with nothing to write.
-        # elm-codegen 0.6 writes a long string as a block string without looking at
-        # its content, so a file holding `"""` comes out as a module that does not
-        # compile.
-        servedFiles = dir: extension:
-          let
-            names =
-              builtins.filter
-                (name: builtins.match ".*\\.${extension}" name != null)
-                (builtins.attrNames (builtins.readDir dir));
-
-            bytesOf = name:
-              let
-                content = builtins.readFile (dir + "/${name}");
-              in
-              if builtins.replaceStrings [ "\"\"\"" ] [ "quoted" ] content != content then
-                builtins.throw "${dir}/${name} holds \"\"\", which no block string can hold"
-              else
-                content;
-          in
-          if names == [ ] then
-            builtins.throw "${dir} holds no .${extension} file"
-          else
-            builtins.listToAttrs (map (name: { name = name; value = bytesOf name; }) names);
-
-        testFixtureFlags =
-          builtins.toFile "test-fixtures.json" (builtins.toJSON {
-            geometry = servedFiles (circuitData + "/geometry") "geojson";
-            maps = servedFiles (circuitData + "/specs") "json";
-          });
-
-        # `app/codegen`'s output — `app/generated/`, and the package's `TestHelpers/Survey/` and `TestHelpers/Map/` — is not committed, so every command that compiles the app or its tests writes it first; elm-codegen comes from `app/node_modules`.
-        # elm-codegen 0.6 exits 0 when the generator itself does not compile, so the old output is removed first: a broken generator then fails the app's compile by module name instead of leaving last run's table in place.
-        # Both generators read the pinned input, so no caller runs `syncCircuitData` for them, and the helper modules are removed with `app/generated/` so a circuit dropped upstream leaves none behind.
-        generateElm = ''
-          rm -rf app/generated package/tests/Motorsport/TestHelpers/Survey package/tests/Motorsport/TestHelpers/Map
-          (cd app && pnpm exec elm-codegen run --flags-from ../data/wec/manufacturers.json --output generated)
-          (cd app && pnpm exec elm-codegen run codegen/TestFixtures.elm --flags-from ${testFixtureFlags} --output ../package/tests)
-        '';
+        codegen = import ./nix/codegen.nix { inherit circuitData; };
+        inherit (codegen) syncCircuitData generateElm;
 
         # Where the CLI and the server compute when the caller names nowhere
         # else. The file is in the working copy rather than under /tmp, so the
